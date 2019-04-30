@@ -13,4 +13,5 @@ data Expr = Ref Var       -- ^ variable reference
 type EvalScope = [(Var, Expr)]
 
 type Redex = Expr 
+-- | cur whole expr + redux
 type Logs = [(Expr, Redex)]
