@@ -12,3 +12,5 @@ data Expr = Ref Var       -- ^ variable reference
 
 type EvalScope = [(Var, Expr)]
 
+type Redex = Expr 
+type Logs = [(Expr, Redex)]

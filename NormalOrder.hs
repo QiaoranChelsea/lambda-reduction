@@ -4,6 +4,7 @@
 module NormalOrder where 
 
 import qualified Data.Map as Map
+import Control.Monad.Writer
 import Syntax 
 -- import Control.Monad.State
 
@@ -16,12 +17,6 @@ eval e = case step [] e of
            Just e' -> eval e'
 
 -- | Do one step normal order reduction and return the result expr
--- 
---   >>> step [] (App (Abs "x" (App (Ref "x") (Ref "y"))) (Ref "y"))
---   Just (App (Ref "y") (Ref "y"))
--- 
---   >>> step [] (App ( Abs "y" (Abs "x" (App (Ref "x") (Ref "y"))) )(Ref "w"))
---   Just (Abs "x" (App (Ref "x") (Ref "w")))
 --   
 --   >>> step [] (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
 --   Just (App (App (Abs "y" (Ref "y")) (Ref "z")) (App (Abs "y" (Ref "y")) (Ref "z")))
@@ -31,9 +26,15 @@ eval e = case step [] e of
 --   
 --   >>> step [] ((App (Ref "z") (App (Abs "y" (Ref "y")) (Ref "z"))))
 --   Just (App (Ref "z") (Ref "z"))
+-- 
+--   >>> step [] (App (Abs "x" (App (Ref "x") (Ref "y"))) (Ref "y"))
+--   Just (App (Ref "y") (Ref "y"))
+-- 
+--   >>> step [] (App ( Abs "y" (Abs "x" (App (Ref "x") (Ref "y"))) )(Ref "w"))
+--   Just (Abs "x" (App (Ref "x") (Ref "w")))
 
 step :: EvalScope -> Expr -> Maybe Expr 
-step env (App (Abs x e) r) = Just$ sub ((x,r):env) e 
+step env (App (Abs x e) r) = Just $ sub ((x,r):env) e 
 step env (App l r) = case step env l of 
                                 Just l' -> Just (App l' r)
                                 Nothing -> fmap (App l) (step env r)
@@ -47,6 +48,25 @@ sub env expr@(Ref x) = case lookup x env of
                             Nothing -> expr
 sub env epxr@(Abs x e) = Abs x (sub env e)   
 sub env (App l r) = App (sub env l) (sub env r)                         
+
+
+-- | Trace the corresponding expr and redux in that reduction
+stepWithLog :: EvalScope -> Expr -> Writer Logs (Maybe Expr) 
+stepWithLog env expr@(App (Abs x e) r) = do 
+    tell [(expr, expr)]
+    return $ Just $ sub ((x,r):env) e 
+stepWithLog env expr@(Ref x)   = return Nothing
+stepWithLog env (Abs x e) = do 
+    e' <- (stepWithLog env e) 
+    return $ fmap (Abs x) e' 
+stepWithLog env (App l r) = do 
+    x <- stepWithLog env l 
+    y <- stepWithLog env r 
+    apply l r x y
+
+apply :: Expr -> Expr -> Maybe Expr -> Maybe Expr -> Writer Logs (Maybe Expr)
+apply l r (Just x)  _        = return $ Just (App x r)
+apply l r Nothing   y = return $ fmap (App l ) y
 
 
 
