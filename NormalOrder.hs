@@ -6,6 +6,7 @@ module NormalOrder where
 import qualified Data.Map as Map
 import Control.Monad.Writer
 import Syntax 
+import PrettyPrint
 -- import Control.Monad.State
 
 -- | Evaluate an expression to normal form using normal order evaluation.
@@ -50,6 +51,37 @@ sub env epxr@(Abs x e) = Abs x (sub env e)
 sub env (App l r) = App (sub env l) (sub env r)                         
 
 
+
+evalWithLogs :: Expr -> Writer Logs Expr  
+evalWithLogs e = case stepWithRedex [] e of
+                    (_, [])       -> do 
+                        return e
+                    (Nothing,_) -> do 
+                        return e
+                    (Just e',log) -> do 
+                        tell [(e, (head log))]
+                        evalWithLogs e'
+
+
+stepWithRedex :: EvalScope -> Expr -> (Maybe Expr, [Redex]) 
+stepWithRedex env expr@(App (Abs x e) r) = let res  = Just $ sub ((x,r):env) e 
+                                               red = [expr]
+                                           in (res, red)
+stepWithRedex env expr@(Ref x)   = (Nothing, [])
+stepWithRedex env (Abs x e) = let (e', red) = stepWithRedex env e 
+                            in  (fmap (Abs x) e', red)
+stepWithRedex env (App l r) = case stepWithRedex env l of 
+                                (Just l',red) -> (Just (App l' r), red )
+                                (Nothing,_) -> let (r', red) = stepWithRedex env r
+                                               in ( fmap (App l) r', red)
+
+evalLambda :: Expr -> IO ()
+evalLambda e = printWriter $ evalWithLogs e  
+
+lambda1 = (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
+evaltest = evalWithLogs (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
+logs = snd $ runWriter $ evalWithLogs (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
+results = fst $ runWriter $ evalWithLogs (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
 -- | Trace the corresponding expr and redux in that reduction
 -- stepWithLog :: EvalScope -> Expr -> Writer Logs (Maybe Expr) 
 -- stepWithLog env expr@(App (Abs x e) r) = do 
@@ -67,33 +99,4 @@ sub env (App l r) = App (sub env l) (sub env r)
 -- apply :: Expr -> Expr -> Maybe Expr -> Maybe Expr -> Writer Logs (Maybe Expr)
 -- apply l r (Just x)  _        = return $ Just (App x r)
 -- apply l r Nothing   y = return $ fmap (App l ) y
-
-
-evalWithLogs :: Expr -> Writer Logs Expr  
-evalWithLogs e = case stepWithRedex [] e of
-                    (_, [])       -> do 
-                        return e
-                    (Nothing,_) -> do 
-                        return e
-                    (Just e',log) -> do 
-                        tell [(e, (head log))]
-                        evalWithLogs e'
-                        
-
-stepWithRedex :: EvalScope -> Expr -> (Maybe Expr, [Redex]) 
-stepWithRedex env expr@(App (Abs x e) r) = let res  = Just $ sub ((x,r):env) e 
-                                               red = [expr]
-                                           in (res, red)
-stepWithRedex env expr@(Ref x)   = (Nothing, [])
-stepWithRedex env (Abs x e) = let (e', red) = stepWithRedex env e 
-                            in  (fmap (Abs x) e', red)
-stepWithRedex env (App l r) = case stepWithRedex env l of 
-                                (Just l',red) -> (Just (App l' r), red )
-                                (Nothing,_) -> let (r', red) = stepWithRedex env r
-                                               in ( fmap (App l) r', red)
-
-
-test1 = evalWithLogs (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
-
-
 
