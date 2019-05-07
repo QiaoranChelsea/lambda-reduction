@@ -78,7 +78,12 @@ stepWithRedex env (App l r) = case stepWithRedex env l of
 evalLambda :: Expr -> IO ()
 evalLambda e = printWriter $ evalWithLogs e  
 
+-- | (\x . x x) ((\y . y) z)
 lambda1 = (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
+
+-- | (\ x. (\ y. y x) (\ z. z)) (\ z.z) 
+lambda2 = App (Abs "x" (App (Abs "y" (App (Ref "y")(Ref "x") )  ) (Abs "z" (Ref "z") ))) (Abs "z" (Ref "z") )
+
 evaltest = evalWithLogs (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
 logs = snd $ runWriter $ evalWithLogs (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
 results = fst $ runWriter $ evalWithLogs (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
