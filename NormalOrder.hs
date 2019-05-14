@@ -7,6 +7,7 @@ import qualified Data.Map as Map
 import Control.Monad.Writer
 import Syntax 
 import PrettyPrint
+import Data.List
 -- import Control.Monad.State
 
 -- | Evaluate an expression to normal form using normal order evaluation.
@@ -51,6 +52,10 @@ sub env epxr@(Abs x e) = Abs x (sub env e)
 sub env (App l r) = App (sub env l) (sub env r)                         
 
 
+-- 
+--  * evaluate the lambda expression 
+--    and keep track of each result of reduction and corresponding redex
+--
 
 evalWithLogs :: Expr -> Writer Logs Expr  
 evalWithLogs e = case stepWithRedex [] e of
@@ -78,15 +83,59 @@ stepWithRedex env (App l r) = case stepWithRedex env l of
 evalLambda :: Expr -> IO ()
 evalLambda e = printWriter $ evalWithLogs e  
 
+
+-- 
+-- capture-avoiding substution 
+--
+
+-- rename :: (BVList,FVList) -> Expr ->  (BVList,FVList) -> Expr 
+-- rename (bv,fv) expr@(App (Abs x e) r) = case lookup x fv' of 
+--                                           Just b -> App   
+--                                     where fv' = freeVariable r fv 
+--                                           bv' = boundVariable e bv 
+
+
+-- Given an expression e, the following rules define FV(e), the set of free variables in e:
+-- If e is a variable x, then FV(e) = {x}.
+-- If e is of the form λx.y, then FV(e) = FV(y) - {x}.
+-- If e is of the form xy, then FV(e) = FV(x) ∪ FV(y)
+free :: Expr -> [Var] 
+free (Ref x)   = [x]
+free (Abs x y) = delete x (free y) 
+free (App x y) = nub (free x ++ free y)
+
+freeVariable env (Abs x e) fv = fv
+
+-- bound :: Expr -> [Var]
+-- bound (Ref x)   bv = bv
+-- bound (App l r) bv = let bv' = bound l bv
+--                              in bound r bv'
+-- bound (Abs x e) bv = x: bound e bv
+-- boundVariable expr@(App (Abs x e) r) bv = x: boundVariable e bv
+
+
+
+
+
+
+
 -- | (\x . x x) ((\y . y) z)
 lambda1 = (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
 
 -- | (\ x. (\ y. y x) (\ z. z)) (\ z.z) 
 lambda2 = App (Abs "x" (App (Abs "y" (App (Ref "y")(Ref "x") )  ) (Abs "z" (Ref "z") ))) (Abs "z" (Ref "z") )
 
+-- | (\x.\y. x) y u 
+lambda3 = App (App (Abs "x" (Abs "y" (Ref "x"))) (Ref "y")) (Ref "u")
+
+-- | (\x.xy) y
+lambda4 = App (Abs "x" (App (Ref "x") ( Ref "y"))) (Ref "y")
+
 evaltest = evalWithLogs (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
 logs = snd $ runWriter $ evalWithLogs (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
 results = fst $ runWriter $ evalWithLogs (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
+
+
 -- | Trace the corresponding expr and redux in that reduction
 -- stepWithLog :: EvalScope -> Expr -> Writer Logs (Maybe Expr) 
 -- stepWithLog env expr@(App (Abs x e) r) = do 
