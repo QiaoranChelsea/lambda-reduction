@@ -114,13 +114,21 @@ free (App x y) = nub (free x ++ free y)
 
 
 evalLambda :: Expr -> IO ()
-evalLambda = printWriter.evalWithLogs.rename 
+evalLambda expr = let expr' = rename expr
+                  in case expr' == expr  of  
+                    True -> printWriter $ evalWithLogs expr 
+                    False -> do 
+                       putStrLn $ prettyExpr expr 
+                       putStrLn $ "=" ++ (prettyEval $ evalWithLogs $ rename expr)
 
 
 
 
 
 
+--
+-- small test suite
+--
 
 -- | (\x . x x) ((\y . y) z)
 lambda1 = (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (Ref "z")))

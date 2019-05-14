@@ -11,7 +11,11 @@ data Expr = Ref Var       -- ^ variable reference
   deriving (Eq,Show)
 
 type EvalScope = [(Var, Expr)]
+-- | old var,new var
+type RenameMapping = [(Var, Var)]
 
 type Redex = Expr 
 -- | cur whole expr + redux
 type Logs = [(Expr, Redex)]
+
+
