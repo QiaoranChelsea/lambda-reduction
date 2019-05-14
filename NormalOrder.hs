@@ -90,10 +90,12 @@ rename :: Expr -> Expr
 rename = subv []
 
 subv :: RenameMapping -> Expr -> Expr
-subv m (App (Abs x e) r) = let fv = free r
-                               m' = zip fv (zipWith (++) fv (map show [1..(length fv)] ))
-                               e' = subv m' e
-                           in (App (Abs x e') r)
+subv m expr@(App (Abs x e) r) = let fv = free r
+                                    m' = zip fv (zipWith (++) fv (map show [1..(length fv)] ))
+                                    e' = subv m' e
+                                in case lookup x m' of
+                                  Just nx -> (App (Abs nx e') r)
+                                  Nothing -> (App (Abs x e') r)
 subv m expr@(Ref x) = case lookup x m of 
                             Just nv -> Ref nv 
                             Nothing -> expr
@@ -132,6 +134,7 @@ evalLambda expr = let expr' = rename expr
 
 -- | (\x . x x) ((\y . y) z)
 lambda1 = (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
+lambda1' = (App (Abs "z" (App (Ref "z") (Ref "z") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
 
 -- | (\ x. (\ y. y x) (\ z. z)) (\ z.z) 
 lambda2 = App (Abs "x" (App (Abs "y" (App (Ref "y")(Ref "x") )  ) (Abs "z" (Ref "z") ))) (Abs "z" (Ref "z") )
