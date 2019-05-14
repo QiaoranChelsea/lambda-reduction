@@ -80,38 +80,41 @@ stepWithRedex env (App l r) = case stepWithRedex env l of
                                 (Nothing,_) -> let (r', red) = stepWithRedex env r
                                                in ( fmap (App l) r', red)
 
-evalLambda :: Expr -> IO ()
-evalLambda e = printWriter $ evalWithLogs e  
-
 
 -- 
 -- capture-avoiding substution 
 --
 
--- rename :: (BVList,FVList) -> Expr ->  (BVList,FVList) -> Expr 
--- rename (bv,fv) expr@(App (Abs x e) r) = case lookup x fv' of 
---                                           Just b -> App   
---                                     where fv' = freeVariable r fv 
---                                           bv' = boundVariable e bv 
+-- | rename variable to avoid variable capture problem
+rename :: Expr -> Expr
+rename = subv []
 
+subv :: RenameMapping -> Expr -> Expr
+subv m (App (Abs x e) r) = let fv = free r
+                               m' = zip fv (zipWith (++) fv (map show [1..(length fv)] ))
+                               e' = subv m' e
+                           in (App (Abs x e') r)
+subv m expr@(Ref x) = case lookup x m of 
+                            Just nv -> Ref nv 
+                            Nothing -> expr
+subv m (Abs x e) = case lookup x m of 
+                            Just nv -> Abs nv (subv m e)  
+                            Nothing ->  Abs x (subv m e)  
+subv m (App l r) = App (subv m l) (subv m r)   
 
 -- Given an expression e, the following rules define FV(e), the set of free variables in e:
 -- If e is a variable x, then FV(e) = {x}.
 -- If e is of the form λx.y, then FV(e) = FV(y) - {x}.
 -- If e is of the form xy, then FV(e) = FV(x) ∪ FV(y)
+-- | get all the free variable in the expression
 free :: Expr -> [Var] 
 free (Ref x)   = [x]
 free (Abs x y) = delete x (free y) 
 free (App x y) = nub (free x ++ free y)
 
-freeVariable env (Abs x e) fv = fv
 
--- bound :: Expr -> [Var]
--- bound (Ref x)   bv = bv
--- bound (App l r) bv = let bv' = bound l bv
---                              in bound r bv'
--- bound (Abs x e) bv = x: bound e bv
--- boundVariable expr@(App (Abs x e) r) bv = x: boundVariable e bv
+evalLambda :: Expr -> IO ()
+evalLambda = printWriter.evalWithLogs.rename 
 
 
 
@@ -125,6 +128,7 @@ lambda1 = (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (R
 -- | (\ x. (\ y. y x) (\ z. z)) (\ z.z) 
 lambda2 = App (Abs "x" (App (Abs "y" (App (Ref "y")(Ref "x") )  ) (Abs "z" (Ref "z") ))) (Abs "z" (Ref "z") )
 
+lambda3' = (App (Abs "x" (Abs "y" (Ref "x"))) (Ref "y"))
 -- | (\x.\y. x) y u 
 lambda3 = App (App (Abs "x" (Abs "y" (Ref "x"))) (Ref "y")) (Ref "u")
 
