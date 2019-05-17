@@ -43,6 +43,11 @@ step env (App l r) = case step env l of
 step env expr@(Ref x)   = Nothing
 step env (Abs x e) = fmap (Abs x) (step env e) 
 
+step' :: Expr ->  Expr 
+step' e = case step [] e of
+           Nothing -> e
+           Just e' -> e'
+
 -- | Variable substitution based EvalScope 
 sub :: EvalScope -> Expr -> Expr
 sub env expr@(Ref x) = case lookup x env of 
@@ -62,7 +67,7 @@ evalWithLogs e = case stepWithRedex [] e of
                     (_, [])       -> do 
                         return e
                     (Nothing,_) -> do 
-                        return e
+                        return e -- refactor to do    
                     (Just e',log) -> do 
                         tell [(e, (head log))]
                         evalWithLogs e'
@@ -79,7 +84,7 @@ stepWithRedex env (App l r) = case stepWithRedex env l of
                                 (Just l',red) -> (Just (App l' r), red )
                                 (Nothing,_) -> let (r', red) = stepWithRedex env r
                                                in ( fmap (App l) r', red)
-
+                                  -- liftM ??
 
 -- 
 -- capture-avoiding substution 
@@ -125,47 +130,6 @@ evalLambda expr = let expr' = rename expr
 
 
 
-
-
-
---
--- small test suite
---
-
--- | (\x . x x) ((\y . y) z)
-lambda1 = (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
-lambda1' = (App (Abs "z" (App (Ref "z") (Ref "z") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
-
--- | (\ x. (\ y. y x) (\ z. z)) (\ z.z) 
-lambda2 = App (Abs "x" (App (Abs "y" (App (Ref "y")(Ref "x") )  ) (Abs "z" (Ref "z") ))) (Abs "z" (Ref "z") )
-
-lambda3' = (App (Abs "x" (Abs "y" (Ref "x"))) (Ref "y"))
--- | (\x.\y. x) y u 
-lambda3 = App (App (Abs "x" (Abs "y" (Ref "x"))) (Ref "y")) (Ref "u")
-
--- | (\x.xy) y
-lambda4 = App (Abs "x" (App (Ref "x") ( Ref "y"))) (Ref "y")
-
 evaltest = evalWithLogs (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
 logs = snd $ runWriter $ evalWithLogs (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
 results = fst $ runWriter $ evalWithLogs (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
-
-
--- | Trace the corresponding expr and redux in that reduction
--- stepWithLog :: EvalScope -> Expr -> Writer Logs (Maybe Expr) 
--- stepWithLog env expr@(App (Abs x e) r) = do 
---     tell [(expr, expr)]
---     return $ Just $ sub ((x,r):env) e 
--- stepWithLog env expr@(Ref x)   = return Nothing
--- stepWithLog env (Abs x e) = do 
---     e' <- (stepWithLog env e) 
---     return $ fmap (Abs x) e' 
--- stepWithLog env (App l r) = do 
---     x <- stepWithLog env l 
---     y <- stepWithLog env r 
---     apply l r x y
-
--- apply :: Expr -> Expr -> Maybe Expr -> Maybe Expr -> Writer Logs (Maybe Expr)
--- apply l r (Just x)  _        = return $ Just (App x r)
--- apply l r Nothing   y = return $ fmap (App l ) y
-

@@ -18,4 +18,6 @@ type Redex = Expr
 -- | cur whole expr + redux
 type Logs = [(Expr, Redex)]
 
-
+-- | Graph for Eval Trace, Pair shows the child with its path
+data EvalGraph = Node Expr [(EvalGraph, Expr)]
+	deriving (Show)
