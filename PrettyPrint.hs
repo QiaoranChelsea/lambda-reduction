@@ -7,12 +7,15 @@ import Control.Monad.Writer
 
 -- type Logs = [(Expr, Redex)]
 
+instance Show Expr where
+  show = prettyExpr
+
 prettyExpr :: Expr -> String 
 prettyExpr (Ref v)     =  v 
 -- prettyExpr (App l (Ref v2)) = prettyExpr l ++ " " ++ v2
 -- prettyExpr (App (Ref v1) r) = v1 ++ " " ++ prettyExpr r 
-prettyExpr (App l r )  = "(" ++ prettyExpr l ++ ") (" ++ prettyExpr r ++ ")"
-prettyExpr (Abs v e)   = "\\" ++ v ++ " . "++ prettyExpr e
+prettyExpr (App l r )  = concat ["(", prettyExpr l, " ", prettyExpr r, ")"] 
+prettyExpr (Abs v e)   = concat ["(λ", v, ". ", prettyExpr e, ")"] 
 
 
 prettyLogs :: Logs -> String 

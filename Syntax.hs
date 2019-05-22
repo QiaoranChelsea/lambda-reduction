@@ -8,7 +8,7 @@ type Var = String
 data Expr = Ref Var       -- ^ variable reference
          | App Expr Expr  -- ^ application
          | Abs Var Expr   -- ^ lambda abstraction
-  deriving (Eq,Show)
+  deriving (Eq)
 
 type EvalScope = [(Var, Expr)]
 -- | old var,new var
@@ -20,4 +20,5 @@ type Logs = [(Expr, Redex)]
 
 -- | Graph for Eval Trace, Pair shows the child with its path
 data EvalGraph = Node Expr [(EvalGraph, Expr)]
-	deriving (Show)
+
+

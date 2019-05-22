@@ -14,7 +14,7 @@ import Data.List
 --   Note that this function will not terminate if the reduction never
 --   reaches a normal form!
 eval :: Expr -> Expr
-eval e = case step [] e of
+eval e = case step' [] e of
            Nothing -> e
            Just e' -> eval e'
 
@@ -35,16 +35,17 @@ eval e = case step [] e of
 --   >>> step [] (App ( Abs "y" (Abs "x" (App (Ref "x") (Ref "y"))) )(Ref "w"))
 --   Just (Abs "x" (App (Ref "x") (Ref "w")))
 
-step :: EvalScope -> Expr -> Maybe Expr 
-step env (App (Abs x e) r) = Just $ sub ((x,r):env) e 
-step env (App l r) = case step env l of 
+step' :: EvalScope -> Expr -> Maybe Expr 
+step' env (App (Abs x e) r) = Just $ sub ((x,r):env) e 
+step' env (App l r) = case step' env l of 
                                 Just l' -> Just (App l' r)
-                                Nothing -> fmap (App l) (step env r)
-step env expr@(Ref x)   = Nothing
-step env (Abs x e) = fmap (Abs x) (step env e) 
+                                Nothing -> fmap (App l) (step' env r)
+step' env expr@(Ref x)   = Nothing
+step' env (Abs x e) = fmap (Abs x) (step' env e) 
 
-step' :: Expr ->  Expr 
-step' e = case step [] e of
+-- | perfrom one step reduction 
+step :: Expr ->  Expr 
+step e = case step' [] e of
            Nothing -> e
            Just e' -> e'
 
