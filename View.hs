@@ -20,10 +20,8 @@ filterRedex f (Abs x e) = filterRedex f e
 
 -- check if current lambda expression is a redex
 isRedex :: Expr -> Bool 
-isRedex (Ref _)           = False 
 isRedex (App (Abs x e) r) = True 
-isRedex (Abs x e)         = isRedex e
-isRedex (App l r)         = isRedex l && isRedex r 
+isRedex _         = False
 
 -- | Reduce the Expr based on the Redex choosed 
 lfReduce :: Expr -> Redex -> Expr 

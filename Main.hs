@@ -31,7 +31,7 @@ lambda4 = App (Abs "x" (App (Ref "x") ( Ref "y"))) (Ref "y")
 
 -- | (\x.xx)((\y.y)z)
 lambda5 = App (Abs "x" (App (Ref "x") (Ref "x"))) (App (Abs "y" (Ref "y")) (Ref "z"))
-
+lambda5' = (App (App (Abs "y" (Ref "y")) (Ref "z")) (App (Abs "y" (Ref "y")) (Ref "z"))) 
 
 
 -- | Trace the corresponding expr and redux in that reduction
