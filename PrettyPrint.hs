@@ -1,32 +1,44 @@
 module PrettyPrint where 
 
+
 import Syntax
 import Control.Monad.Writer
--- print current expression and the selected redex
--- challenge: pretty print the parentheses
 
--- type Logs = [(Expr, Redex)]
-
-instance Show Expr where
-  show = prettyExpr
-
-prettyExpr :: Expr -> String 
-prettyExpr (Ref v)     =  v 
--- prettyExpr (App l (Ref v2)) = prettyExpr l ++ " " ++ v2
--- prettyExpr (App (Ref v1) r) = v1 ++ " " ++ prettyExpr r 
-prettyExpr (App l r )  = concat ["(", prettyExpr l, " ", prettyExpr r, ")"] 
-prettyExpr (Abs v e)   = concat ["(λ", v, ". ", prettyExpr e, ")"] 
+-- data EvalView = Leaf Expr | Node Expr [(EvalView, Redex)]
 
 
-prettyLogs :: Logs -> String 
-prettyLogs []            = ""
-prettyLogs ((e,red):xs)  = prettyExpr e ++ "\t --"  ++ prettyExpr red ++ "\n" ++ "=> " ++ prettyLogs xs 
+drawView :: EvalView -> String 
+drawView = unlines . drawView'
 
-prettyEval :: Writer Logs Expr -> String 
-prettyEval w = let logs = snd $ runWriter w 
-                   results = fst $ runWriter w
-               in prettyLogs logs ++ prettyExpr results 
+drawView' :: EvalView -> [String]
+drawView' (Node e xs) = prettyExpr e : drawSubTrees xs
+  where
+    drawSubTrees [] = []
+    drawSubTrees [(v,red)] =
+        "|" : shift "`- " "   " (drawView' v)
+    drawSubTrees ((v,red):ts) =
+        "|" : shift "+- " "|  " (drawView' v) ++ drawSubTrees ts
+    shift first other = zipWith (++) (first : repeat other)
+drawView' (Leaf e) = [prettyExpr e]
 
-printWriter :: Writer Logs Expr -> IO ()
-printWriter w = putStrLn $ prettyEval w 
+
+-- -- | Neat 2-dimensional drawing of a tree.
+-- drawTree :: Tree String -> String
+-- drawTree  = unlines . draw
+
+-- -- | Neat 2-dimensional drawing of a forest.
+-- drawForest :: Forest String -> String
+-- drawForest  = unlines . map drawTree
+
+-- draw :: EvalLayer -> [String]
+-- draw (Node x ts0) = x : drawSubTrees ts0
+--   where
+--     drawSubTrees [] = []
+--     drawSubTrees [t] =
+--         "|" : shift "`- " "   " (draw t)
+--     drawSubTrees (t:ts) =
+--         "|" : shift "+- " "|  " (draw t) ++ drawSubTrees ts
+
+-- --     shift first other = zipWith (++) (first : repeat other)
+
 

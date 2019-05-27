@@ -1,13 +1,11 @@
-module ViewGraph where 
-
+module View where 
 
 import Syntax 
-import Data.Graph
 import NormalOrder
 
 
 -- | get all redexes in current level lambda expression
-getRedexes :: Expr -> [Expr]
+getRedexes :: Expr -> [Redex]
 getRedexes = filterRedex isRedex
 
 -- filter out all redexes in current level lambda expression
@@ -27,12 +25,31 @@ isRedex (App (Abs x e) r) = True
 isRedex (Abs x e)         = isRedex e
 isRedex (App l r)         = isRedex l && isRedex r 
 
--- | reduce the Expr based on the Redex choosed 
+-- | Reduce the Expr based on the Redex choosed 
 lfReduce :: Expr -> Redex -> Expr 
 lfReduce e@(App l r) red | e == red = step e 
                          | l == red = App (step l) r 
                          | r == red = App l (step r)
 lfReduce (Abs x body) red = Abs x (lfReduce body red)
 lfReduce e   _   = e 
+
+-- | init a evaluation graph based on input lambda expression
+initView :: Expr -> EvalView
+initView = transLayer2View. initOneLayer 
+
+-- init one layer of evaluation tree
+initOneLayer :: Expr -> EvalLayer
+initOneLayer e = let reds = getRedexes e
+                     result = map (lfReduce e) reds 
+                 in Layer e (zip result reds)
+
+-- translate One Layer to View Tree 
+transLayer2View :: EvalLayer -> EvalView
+transLayer2View (Layer e []) = Leaf e
+transLayer2View (Layer e xs) = let sub = map (\(expr, red) -> (transLayer2View (initOneLayer expr), red )) xs
+                               in Node e sub
+
+
+
 
 

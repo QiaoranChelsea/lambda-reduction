@@ -1,13 +1,15 @@
 module Main where 
 
 import NormalOrder
-import ViewGraph
+import View
 import Syntax
 import PrettyPrint
 
 main :: IO ()
 main = return ()
 
+printView :: Expr -> IO ()
+printView = putStrLn . drawView . initView
 
 --
 -- small test suite
