@@ -1,15 +1,21 @@
 module Main where 
 
 import NormalOrder
-import View
+import EvalView
 import Syntax
 import PrettyPrint
 
 main :: IO ()
 main = return ()
 
-printView :: Expr -> IO ()
-printView = putStrLn . drawView . initView
+printResultView :: Expr -> IO ()
+printResultView = putStrLn . drawResultView . initView
+
+viewResults :: EvalView -> IO ()
+viewResults = putStrLn . drawResultView 
+
+view :: EvalView -> IO ()
+view = putStrLn . drawAllView
 
 --
 -- small test suite

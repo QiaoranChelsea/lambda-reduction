@@ -7,19 +7,34 @@ import Control.Monad.Writer
 -- data EvalView = Leaf Expr | Node Expr [(EvalView, Redex)]
 
 
-drawView :: EvalView -> String 
-drawView = unlines . drawView'
+drawResultView :: EvalView -> String 
+drawResultView = unlines . drawResultView'
 
-drawView' :: EvalView -> [String]
-drawView' (Node e xs) = prettyExpr e : drawSubTrees xs
+drawResultView' :: EvalView -> [String]
+drawResultView' (Node e xs) = prettyExpr e : drawSubTrees xs
   where
     drawSubTrees [] = []
     drawSubTrees [(v,red)] =
-        "|" : shift "`- " "   " (drawView' v)
+        "|" : shift "`- " "   " (drawResultView' v)
     drawSubTrees ((v,red):ts) =
-        "|" : shift "+- " "|  " (drawView' v) ++ drawSubTrees ts
+        "|" : shift "+- " "|  " (drawResultView' v) ++ drawSubTrees ts
     shift first other = zipWith (++) (first : repeat other)
-drawView' (Leaf e) = [prettyExpr e]
+drawResultView' (Leaf e) = [prettyExpr e]
+
+
+drawAllView :: EvalView -> String 
+drawAllView = unlines . drawAllView'
+
+drawAllView' :: EvalView -> [String]
+drawAllView' (Node e xs) = prettyExpr e : drawSubTrees xs
+  where
+    drawSubTrees [] = []
+    drawSubTrees [(v,red)] =
+        "|" : shift "`- " "   " (["*" ++ prettyExpr red++"*"] ++ drawAllView' v  )
+    drawSubTrees ((v,red):ts) =
+        "|" : shift "+- " "|  " (["*" ++ prettyExpr red++"*"] ++ drawAllView' v )   ++ drawSubTrees ts
+    shift first other = zipWith (++) (first : repeat other)
+drawAllView' (Leaf e) = [prettyExpr e]
 
 
 -- -- | Neat 2-dimensional drawing of a tree.

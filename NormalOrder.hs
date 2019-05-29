@@ -64,14 +64,17 @@ sub env (App l r) = App (sub env l) (sub env r)
 --
 
 evalWithLogs :: Expr -> Writer Logs Expr  
-evalWithLogs e = case stepWithRedex [] e of
-                    (_, [])       -> do 
-                        return e
-                    (Nothing,_) -> do 
-                        return e -- refactor to do    
+evalWithLogs e = case stepWithRedex [] e of   
                     (Just e',log) -> do 
                         tell [(e, (head log))]
                         evalWithLogs e'
+                    _            -> do
+                        return e
+                        
+                    -- (_, [])       -> do 
+                    --     return e
+                    -- (Nothing,_) -> do 
+                    --     return e 
 
 
 stepWithRedex :: EvalScope -> Expr -> (Maybe Expr, [Redex]) 

@@ -1,4 +1,4 @@
-module View where 
+module EvalView where 
 
 import Syntax 
 import NormalOrder
@@ -47,7 +47,20 @@ transLayer2View (Layer e []) = Leaf e
 transLayer2View (Layer e xs) = let sub = map (\(expr, red) -> (transLayer2View (initOneLayer expr), red )) xs
                                in Node e sub
 
+-- | get top level redexes 
+redexes :: EvalView -> EvalView 
+redexes (Node e children) =  Node e $ map (\(eview,red)-> (getRoot eview,red)) children
+        where getRoot (Node e sub) = Leaf e 
 
+-- | Produce view that shows result nth redex
+reduceWith :: Int -> EvalView -> EvalView 
+reduceWith i (Node e children) = let (eview,red) = children !! i 
+                                     subview = initView $ getRootExp eview 
+                                 in Node e [(subview, red)]
+             where getRootExp (Node e sub) = e 
+                   getRootExp (Leaf e)     = e
+                                     
+                    
 
 
 
