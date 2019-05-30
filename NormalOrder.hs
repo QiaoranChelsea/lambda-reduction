@@ -8,7 +8,6 @@ import Control.Monad.Writer
 import Syntax 
 import PrettyPrint
 import Data.List
--- import Control.Monad.State
 
 -- | Evaluate an expression to normal form using normal order evaluation.
 --   Note that this function will not terminate if the reduction never

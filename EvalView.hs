@@ -24,6 +24,7 @@ isRedex (App (Abs x e) r) = True
 isRedex _         = False
 
 -- | Reduce the Expr based on the Redex choosed 
+--   * NOTE: lfReduce only reduce the first seen Redex from left
 lfReduce :: Expr -> Redex -> Expr 
 lfReduce e@(App l r) red | e == red = step e 
                          | l == red = App (step l) r 

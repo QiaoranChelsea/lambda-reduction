@@ -15,10 +15,12 @@ data Expr = Ref Var       -- ^ variable reference
   deriving (Eq)
 
 type EvalScope = [(Var, Expr)]
+
 -- | old var,new var
 type RenameMapping = [(Var, Var)]
 
-type Redex = Expr 
+type Redex = Expr
+
 -- | cur whole expr + redux
 type Logs = [(Expr, Redex)]
 
@@ -26,6 +28,7 @@ type Logs = [(Expr, Redex)]
 data EvalView = Leaf Expr | Node Expr [(EvalView, Redex)]
     deriving (Show)
 
+-- | One layer of the Evaluation 
 data EvalLayer = Layer Expr [(Expr, Redex)]
     deriving (Show)
 
