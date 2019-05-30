@@ -94,3 +94,15 @@ Evaluate Lambda in Normal Order
 => (z z)
 ```
 
+Rename the bound variable to avoid variable capture
+```
+> lambda3
+(((λx. (λy. x)) y) u)
+```
+
+```
+> rename lambda3 
+(((λx. (λy1. x)) y) u)
+```
+
+
