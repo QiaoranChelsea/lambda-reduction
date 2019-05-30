@@ -1,4 +1,4 @@
-# Lambda-Reduction-gadget
+# Lambda-Reduction
 
 ## Examples 
 
