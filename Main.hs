@@ -5,6 +5,7 @@ import EvalView
 import Syntax
 import PrettyPrint
 
+-- TODO: 1. cut the operation if exceed some depth
 main :: IO ()
 main = return ()
 
