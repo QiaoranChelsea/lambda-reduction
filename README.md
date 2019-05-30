@@ -1,4 +1,4 @@
-# Lambda-Reduction Explanation Tree 
+# Lambda-Reduction Explanation  
 
 ## Examples 
 
