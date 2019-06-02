@@ -97,6 +97,7 @@ stepWithRedex env (App l r) = case stepWithRedex env l of
 rename :: Expr -> Expr
 rename = subv []
 
+-- | substitude the bound variables for avoiding variable
 subv :: RenameMapping -> Expr -> Expr
 subv m expr@(App (Abs x e) r) = let fv = free r
                                     m' = zip fv (zipWith (++) fv (map show [1..(length fv)] ))
@@ -116,13 +117,14 @@ subv m (App l r) = App (subv m l) (subv m r)
 -- If e is a variable x, then FV(e) = {x}.
 -- If e is of the form λx.y, then FV(e) = FV(y) - {x}.
 -- If e is of the form xy, then FV(e) = FV(x) ∪ FV(y)
--- | get all the free variable in the expression
+--  get all the free variable in the expression
 free :: Expr -> [Var] 
 free (Ref x)   = [x]
 free (Abs x y) = delete x (free y) 
 free (App x y) = nub (free x ++ free y)
 
 
+-- | evaluate a lambda expression by using normal order 
 evalLambda :: Expr -> IO ()
 evalLambda expr = let expr' = rename expr
                   in case expr' == expr  of  

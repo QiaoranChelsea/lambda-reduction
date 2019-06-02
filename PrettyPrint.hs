@@ -30,8 +30,8 @@ drawAllView' (Node e xs) = prettyExpr e : drawSubTrees xs
   where
     drawSubTrees [] = []
     drawSubTrees [(v,red)] =
-        "|" : shift "`- " "   " (["*" ++ prettyExpr red++"*"] ++ drawAllView' v  )
+        "|" : shift "`- " "   " (["REDEX:" ++ prettyExpr red] ++ drawAllView' v  )
     drawSubTrees ((v,red):ts) =
-        "|" : shift "+- " "|  " (["*" ++ prettyExpr red++"*"] ++ drawAllView' v )   ++ drawSubTrees ts
+        "|" : shift "+- " "|  " (["REDEX:" ++ prettyExpr red] ++ drawAllView' v )   ++ drawSubTrees ts
     shift first other = zipWith (++) (first : repeat other)
 drawAllView' (Leaf e) = [prettyExpr e]

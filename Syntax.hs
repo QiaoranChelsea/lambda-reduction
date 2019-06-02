@@ -18,7 +18,6 @@ type EvalScope = [(Var, Expr)]
 
 -- | old var,new var
 type RenameMapping = [(Var, Var)]
-
 type Redex = Expr
 
 -- | cur whole expr + redux
@@ -27,6 +26,8 @@ type Logs = [(Expr, Redex)]
 -- | Graph for Eval Trace, Pair shows the child with its Redex
 data EvalView = Leaf Expr | Node Expr [(EvalView, Redex)]
     deriving (Show)
+
+-- data EvalViewLog = State EvalView (Expr,Expr)
 
 -- | One layer of the Evaluation 
 data EvalLayer = Layer Expr [(Expr, Redex)]
