@@ -72,9 +72,10 @@ initView = transLayer2View. initOneLayer
 -- init one layer of evaluation tree
 -- 
 initOneLayer :: Expr -> EvalLayer
-initOneLayer e = let reds = getRedexes e
-                     result = map (lfReduce e) reds 
-                 in Layer e (zip result reds)
+initOneLayer e = let e' = renameForDupRedex e
+                     reds = getRedexes e'
+                     result = map (lfReduce e') reds 
+                 in Layer e' (zip result reds)
 
 -- translate One Layer to View Tree 
 transLayer2View :: EvalLayer -> EvalView
