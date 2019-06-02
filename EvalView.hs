@@ -40,23 +40,24 @@ type Rename a b = State a b
 -- | rename Expr for the duplicate redexes
 --   * Note that the duplicate redex will only happen when the expr is (App l r) 
 renameForDupRedex :: Expr -> Expr 
-renameForDupRedex e = let (e',m) = subvForDupRedex [] e 
+renameForDupRedex e = let (e',m,log) = subvForDupRedex [] e 
                       in e'
 
 -- substitude bound variable for avoiding duplicate redexes 
-subvForDupRedex :: RenameMapping -> Expr -> (Expr , RenameMapping) 
+subvForDupRedex :: RenameMapping -> Expr -> (Expr , RenameMapping,RenameMapping) 
 subvForDupRedex m expr@(Ref x) = case lookup x m of 
-                                   Just nv -> (Ref nv, m) 
-                                   Nothing -> (expr, m)
-subvForDupRedex m (Abs x e) = let (e',m')= (subvForDupRedex m e)
-                              in case lookup x m of 
-                                   Just nv -> (Abs nv e' , m' )
-                                   Nothing -> (Abs x e' , m' ) 
-subvForDupRedex m (App l r) = let (l',m2) = subvForDupRedex m l 
-                                  (r',m3) = (subvForDupRedex m2 r)  
-                                  bv = nub (bound l' )
-                                  m4 = zip bv (zipWith (++) bv (map show [(1+length m3) .. length m3+(length bv)] ))
-                              in (App l' r', m4)
+                                   Just nv -> (Ref nv, m, (x,nv): m) 
+                                   Nothing -> (expr, m,  m)
+subvForDupRedex m (Abs x e) = let (e',m',log)= (subvForDupRedex m e)
+                              in case lookup x m' of 
+                                   Just nv -> (Abs nv e' , m',(x,nv):log)
+                                   Nothing -> (Abs x e' , m', log ) 
+subvForDupRedex m (App l r) = let (l',m2,log1) = subvForDupRedex m l 
+                                  (r',m3,log2) = (subvForDupRedex m2 r)  
+                                  log = log1 ++ log2
+                                  bv = nub (bound l') \\ (map snd log)
+                                  m4 = zip bv (zipWith (++) bv (map show [1 + (length log ) .. length log+(length bv)] ))
+                              in (App l' r', m4, nub (log1++log2))
 
                                     
 -- get all bound variable in the expression
