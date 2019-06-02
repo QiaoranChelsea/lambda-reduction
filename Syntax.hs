@@ -24,13 +24,14 @@ type Redex = Expr
 type Logs = [(Expr, Redex)]
 
 -- | Graph for Eval Trace, Pair shows the child with its Redex
-data EvalView = Leaf Expr | Node Expr [(EvalView, Redex)]
+data EvalView = Leaf Expr | Node Expr [(EvalView, Redex)] RenameMapping
     deriving (Show)
 
 -- data EvalViewLog = State EvalView (Expr,Expr)
 
 -- | One layer of the Evaluation 
-data EvalLayer = Layer Expr [(Expr, Redex)]
+-- |  [(Expr, Redex, Expr)]=> resultExpr + redex + originalExpr
+data EvalLayer = Layer Expr [(Expr, Redex)] RenameMapping
     deriving (Show)
 
 
@@ -56,4 +57,7 @@ prettyEval w = let logs = snd $ runWriter w
 printWriter :: Writer Logs Expr -> IO ()
 printWriter w = putStrLn $ prettyEval w 
 
+prettyRenameMapping :: RenameMapping -> String 
+prettyRenameMapping [] = ""
+prettyRenameMapping ((x,nv):xs) = concat [nv, "<-", x, ";"] ++ prettyRenameMapping xs 
 

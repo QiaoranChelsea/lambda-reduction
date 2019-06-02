@@ -30,18 +30,17 @@ isRedex _         = False
 --   * NOTE: lfReduce only reduce the first seen Redex from left
 lfReduce :: Expr -> Redex -> Expr 
 lfReduce e@(App l r) red | e == red = step e 
-                         | l == red = App (step l) r 
-                         | r == red = App l (step r)
+                         | elem red (getRedexes l) = App (lfReduce l red) r 
+                         | elem red (getRedexes r) = App l (lfReduce r red)
 lfReduce (Abs x body) red = Abs x (lfReduce body red)
 lfReduce e   _   = e 
 
-type Rename a b = State a b
 
 -- | rename Expr for the duplicate redexes
 --   * Note that the duplicate redex will only happen when the expr is (App l r) 
-renameForDupRedex :: Expr -> Expr 
+renameForDupRedex :: Expr -> (Expr, RenameMapping) 
 renameForDupRedex e = let (e',m,log) = subvForDupRedex [] e 
-                      in e'
+                      in (e',log)
 
 -- substitude bound variable for avoiding duplicate redexes 
 subvForDupRedex :: RenameMapping -> Expr -> (Expr , RenameMapping,RenameMapping) 
@@ -73,28 +72,28 @@ initView = transLayer2View. initOneLayer
 -- init one layer of evaluation tree
 -- 
 initOneLayer :: Expr -> EvalLayer
-initOneLayer e = let e' = renameForDupRedex e
+initOneLayer e = let (e',log) = renameForDupRedex e
                      reds = getRedexes e'
                      result = map (lfReduce e') reds 
-                 in Layer e' (zip result reds)
+                 in Layer e (zip result reds) log
 
 -- translate One Layer to View Tree 
 transLayer2View :: EvalLayer -> EvalView
-transLayer2View (Layer e []) = Leaf e
-transLayer2View (Layer e xs) = let sub = map (\(expr, red) -> (transLayer2View (initOneLayer expr), red )) xs
-                               in Node e sub
+transLayer2View (Layer e [] m) = Leaf e
+transLayer2View (Layer e xs m) = let sub = map (\(expr, red) -> (transLayer2View (initOneLayer expr), red )) xs
+                               in Node e sub m
 
 -- | get top level redexes 
 redexes :: EvalView -> EvalView 
-redexes (Node e children) =  Node e $ map (\(eview,red)-> (getRoot eview,red)) children
-        where getRoot (Node e sub) = Leaf e 
+redexes (Node e children m) =  Node e (map (\(eview,red)-> (getRoot eview,red)) children) m
+        where getRoot (Node e sub m) = Leaf e 
 
 -- | Produce view that shows result from nth redex
 reduceWith :: Int -> EvalView -> EvalView 
-reduceWith i (Node e children) = let (eview,red) = children !! i 
-                                     subview = initView $ getRootExp eview 
-                                 in Node e [(subview, red)]
-             where getRootExp (Node e sub) = e 
+reduceWith i (Node e children m) = let (eview,red) = children !! i 
+                                       subview = initView $ getRootExp eview 
+                                   in Node e [(subview, red)] m
+             where getRootExp (Node e sub m) = e 
                    getRootExp (Leaf e)     = e
                                      
                     

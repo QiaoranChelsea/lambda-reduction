@@ -11,14 +11,15 @@ drawResultView :: EvalView -> String
 drawResultView = unlines . drawResultView'
 
 drawResultView' :: EvalView -> [String]
-drawResultView' (Node e xs) = prettyExpr e : drawSubTrees xs
+drawResultView' (Node e xs m) = prettyExpr e : drawSubTrees xs
   where
     drawSubTrees [] = []
     drawSubTrees [(v,red)] =
-        "|" : shift "`- " "   " (drawResultView' v)
+        "|" : shift "`- " "   " (showRename m ++ drawResultView' v)
     drawSubTrees ((v,red):ts) =
-        "|" : shift "+- " "|  " (drawResultView' v) ++ drawSubTrees ts
+        "|" : shift "+- " "|  " (showRename m ++ drawResultView' v) ++ drawSubTrees ts
     shift first other = zipWith (++) (first : repeat other)
+    showRename = \m -> (if null m then [] else ["RENAME: "++ prettyRenameMapping m])
 drawResultView' (Leaf e) = [prettyExpr e]
 
 
@@ -26,12 +27,28 @@ drawAllView :: EvalView -> String
 drawAllView = unlines . drawAllView'
 
 drawAllView' :: EvalView -> [String]
-drawAllView' (Node e xs) = prettyExpr e : drawSubTrees xs
+drawAllView' (Node e xs m) = prettyExpr e : drawSubTrees xs
   where
     drawSubTrees [] = []
     drawSubTrees [(v,red)] =
-        "|" : shift "`- " "   " (["REDEX:" ++ prettyExpr red] ++ drawAllView' v  )
+        "|" : shift "`- " "   " (["REDEX:" ++ prettyExpr red] ++ showRename m ++ drawAllView' v  )
     drawSubTrees ((v,red):ts) =
-        "|" : shift "+- " "|  " (["REDEX:" ++ prettyExpr red] ++ drawAllView' v )   ++ drawSubTrees ts
+        "|" : shift "+- " "|  " (["REDEX:" ++ prettyExpr red] ++showRename m ++ drawAllView' v )   ++ drawSubTrees ts
     shift first other = zipWith (++) (first : repeat other)
+    showRename = \m -> (if null m then [] else ["RENAME: "++ prettyRenameMapping m])
 drawAllView' (Leaf e) = [prettyExpr e]
+
+-- | data EvalLayer = Layer Expr [(Expr, Redex)] RenameMapping
+drawOneLayer :: EvalLayer -> String 
+drawOneLayer = unlines . drawOneLayer'
+
+drawOneLayer' :: EvalLayer -> [String] 
+drawOneLayer' (Layer e xs m) = prettyExpr e : drawSubTrees xs
+  where
+    drawSubTrees [] = []
+    drawSubTrees [(v,red)] =
+        "|" : shift "`- " "   " (["REDEX:" ++ prettyExpr red] ++ showRename m ++  [prettyExpr v]  )
+    drawSubTrees ((v,red):ts) =
+        "|" : shift "+- " "|  " (["REDEX:" ++ prettyExpr red] ++showRename m ++ [prettyExpr v]  )   ++ drawSubTrees ts
+    shift first other = zipWith (++) (first : repeat other)
+    showRename = \m -> (if null m then [] else ["RENAME: "++ prettyRenameMapping m])

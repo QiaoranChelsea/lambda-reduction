@@ -18,6 +18,8 @@ viewResults = putStrLn . drawResultView
 view :: EvalView -> IO ()
 view = putStrLn . drawAllView
 
+viewLayer :: EvalLayer -> IO ()
+viewLayer = putStrLn . drawOneLayer 
 --
 -- small test suite
 --
