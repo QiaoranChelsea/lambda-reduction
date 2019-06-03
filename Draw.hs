@@ -3,9 +3,11 @@ module Draw where
 import Syntax
 import Control.Monad.Writer
 
+-- | Draw Result view without redex 
 drawResultView :: EvalView -> String 
 drawResultView = unlines . drawView' False
 
+-- | draw view with Redex 
 drawAllView :: EvalView -> String 
 drawAllView = unlines . drawView' True
 
