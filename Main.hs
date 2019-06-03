@@ -3,7 +3,7 @@ module Main where
 import NormalOrder
 import EvalView
 import Syntax
-import PrettyPrint
+import Draw
 
 -- TODO: 1. cut the operation if exceed some depth
 main :: IO ()
@@ -18,8 +18,8 @@ viewResults = putStrLn . drawResultView
 view :: EvalView -> IO ()
 view = putStrLn . drawAllView
 
-viewLayer :: EvalLayer -> IO ()
-viewLayer = putStrLn . drawOneLayer 
+-- viewLayer :: EvalLayer -> IO ()
+-- viewLayer = putStrLn . drawOneLayer 
 --
 -- small test suite
 --
@@ -47,21 +47,9 @@ red5 = App (Abs "y" (Ref "y")) (Ref "z")
 -- | (\x.xxx)((\y.y)z) -- bad loop 
 -- lambda6 = App (Abs "x" (App (App (Ref "x") (Ref "x")) (Ref "x"))) (App (Abs "y" (Ref "y")) (Ref "z"))
 lambda6' = (App (App (App (Abs "y" (Ref "y")) (Ref "z")) (App (Abs "y" (Ref "y")) (Ref "z"))) (App (Abs "y" (Ref "y")) (Ref "z")))
--- | Trace the corresponding expr and redux in that reduction
--- stepWithLog :: EvalScope -> Expr -> Writer Logs (Maybe Expr) 
--- stepWithLog env expr@(App (Abs x e) r) = do 
---     tell [(expr, expr)]
---     return $ Just $ sub ((x,r):env) e 
--- stepWithLog env expr@(Ref x)   = return Nothing
--- stepWithLog env (Abs x e) = do 
---     e' <- (stepWithLog env e) 
---     return $ fmap (Abs x) e' 
--- stepWithLog env (App l r) = do 
---     x <- stepWithLog env l 
---     y <- stepWithLog env r 
---     apply l r x y
 
--- apply :: Expr -> Expr -> Maybe Expr -> Maybe Expr -> Writer Logs (Maybe Expr)
--- apply l r (Just x)  _        = return $ Just (App x r)
--- apply l r Nothing   y = return $ fmap (App l ) y
+test1 = let v = initView lambda5 
+        in view v
+test2 = let v = initView lambda5'
+        in view v
 

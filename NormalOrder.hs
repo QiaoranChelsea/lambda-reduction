@@ -6,7 +6,6 @@ module NormalOrder where
 import qualified Data.Map as Map
 import Control.Monad.Writer
 import Syntax 
-import PrettyPrint
 import Data.List
 
 -- | Evaluate an expression to normal form using normal order evaluation.
