@@ -4,8 +4,11 @@ import NormalOrder
 import EvalView
 import Syntax
 import Draw
+import Control.Monad
 
--- TODO: 1. cut the operation if exceed some depth
+
+-- TODO: 1. cut the operation if exceed some depth 
+--       2. Assume the original var do not have int in the Name 
 main :: IO ()
 main = return ()
 
@@ -48,6 +51,7 @@ red5 = App (Abs "y" (Ref "y")) (Ref "z")
 -- lambda6 = App (Abs "x" (App (App (Ref "x") (Ref "x")) (Ref "x"))) (App (Abs "y" (Ref "y")) (Ref "z"))
 lambda6' = (App (App (App (Abs "y" (Ref "y")) (Ref "z")) (App (Abs "y" (Ref "y")) (Ref "z"))) (App (Abs "y" (Ref "y")) (Ref "z")))
 
+big = App lambda5' lambda6'
 test1 = let v = initView lambda5 
         in view v
 test2 = let v = initView lambda5'
