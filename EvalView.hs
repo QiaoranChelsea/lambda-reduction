@@ -18,59 +18,50 @@ ex =  App (Abs "x" (App (Ref "x") (Ref "x"))) (App (Abs "y" (Ref "y")) (Ref "z")
 
 -- substitude bound variable for avoiding duplicate redexes 
 foo :: Expr ->  ((Expr, RenameLog), RenameMapping)
-foo ex  = runState (runWriterT (foo' ex)) []
+foo ex  = runState (runWriterT (subDupBV ex)) []
 
-re :: Expr -> Expr 
-re ex = let ((a,b),c) = runState (runWriterT (foo' ex)) []
-        in a
+renameDupBV:: Expr -> (Expr, RenameMapping) 
+renameDupBV ex = fst $ runState (runWriterT (subDupBV ex)) []
+                 
+
 -- | log new rename mapping in Log 
 logName :: (Var,Var) -> Eval ()
 logName vpair = do  tell [vpair]  
 
--- | build new variable name mapping 
-buildNameMapping :: [Var] -> RenameLog -> [(Var, Var)]
-buildNameMapping bv log = [ (v, new) | v <- bv, new <- (rightZipWith (++) bv (map show [1 + (length log )  .. length bv + (length log) + 1] ))]
 
+subDupBV :: Expr -> Eval Expr 
+subDupBV e@(Ref x) = do m <- get
+                        case lookup x m of                    
+                          Just nv -> do return (Ref nv)
+                          Nothing -> return e
+subDupBV (Abs x e) = do m <- get 
+                        e' <- subDupBV e 
+                        -- m <- get  
+                        case lookup x m of 
+                          Just nv -> do logName (x,nv)
+                                        return  (Abs nv e')
+                          Nothing -> do return (Abs x e')                
+subDupBV expr@(App l r) = do l' <-  subDupBV l 
+                             updateState l 
+                             r' <- subDupBV r  
+                             updateState r 
+                             return (App l' r')
 
-rightZipWith :: (Var->Var->Var) -> [Var]->[Var]->[Var]
-rightZipWith f = go
-  where
-    go  _  []    = []
-    go [x] (y:ys)= f x y : go [x] ys 
-    go (x:xs) (y:ys) = f x y : go xs ys
-
-foo' :: Expr -> Eval Expr 
-foo' e@(Ref x) = do m <- get
-                    case lookup x m of 
-                      -- Just nv -> do logName (x,nv)
-                      --               return (Ref nv)                      
-                      Just nv -> do return (Ref nv)
-                      Nothing -> return e
-foo' (Abs x e) = do e' <- foo' e 
-                    m <- get 
-                    case lookup x m of 
-                      Just nv -> do logName (x,nv)
-                                    return  (Abs nv e')
-                      Nothing -> do return (Abs x e')                
-foo' expr@(App l r) = do m <- get 
-                         (l',log) <-  listen ( censor nub (foo' l)) 
-                         updateState l log 
-                         (r',log2) <- listen (censor nub (foo' r)) -- listen the log
-                         updateState expr log2
-                         censor nub $ return (App l' r')
-
-updateState :: Expr -> RenameLog ->  Eval ()
-updateState expr log = do m <- get 
-                          let bv =  (nub (bound expr) )
-                              nameMapping = buildNameMapping bv log
-                          put $ nub $ (m ++ nameMapping) \\ log
+updateState :: Expr ->  Eval ()
+updateState expr = do m <- get 
+                      let bv = (nub (bound expr))
+                          nameMapping = newM bv (length m) 
+                      put $ (nameMapping ++ m)
                                  
 -- The censor function takes a function and a Writer and produces a new Writer whose output is the same but whose log entry has been modified by the function.
 -- runEval :: Expr -> (Expr, RenameLog)
 -- runEval x = runState (runWriterT (foo x)) (EvalState 0)            
 
-              
+newV :: Var -> Int -> Var
+newV v i =  v++ (show i)
 
+newM :: [Var] -> Int  -> [(Var, Var)]
+newM bv i = [ (v, newV v i) | v <- bv]
 
 
 -- | get all redexes in current level lambda expression
@@ -138,7 +129,7 @@ initView = transLayer2View. initOneLayer
 -- init one layer of evaluation tree
 -- 
 initOneLayer :: Expr -> EvalLayer
-initOneLayer e = let (e',log) = renameForDupRedex e
+initOneLayer e = let (e',log) = renameDupBV e
                      reds = getRedexes e'
                      result = map (lfReduce e') reds 
                  in Layer e (zip result reds) log
