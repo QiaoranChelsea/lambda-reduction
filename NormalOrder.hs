@@ -1,12 +1,9 @@
 -- | operation in Normal Order Evaluation
---   limitation: Do not support renaming for free variable 
-
 module NormalOrder where 
 
 import qualified Data.Map as Map
 import Control.Monad.Writer
 import Syntax 
-import PrettyPrint
 import Data.List
 
 -- | Evaluate an expression to normal form using normal order evaluation.
@@ -18,22 +15,6 @@ eval e = case step' [] e of
            Just e' -> eval e'
 
 -- | Do one step normal order reduction and return the result expr
---   
---   >>> step [] (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
---   Just (App (App (Abs "y" (Ref "y")) (Ref "z")) (App (Abs "y" (Ref "y")) (Ref "z")))
---
---   >>> step [] (App (App (Abs "y" (Ref "y")) (Ref "z")) (App (Abs "y" (Ref "y")) (Ref "z")))
---   Just (App (Ref "z") (App (Abs "y" (Ref "y")) (Ref "z")))
---   
---   >>> step [] ((App (Ref "z") (App (Abs "y" (Ref "y")) (Ref "z"))))
---   Just (App (Ref "z") (Ref "z"))
--- 
---   >>> step [] (App (Abs "x" (App (Ref "x") (Ref "y"))) (Ref "y"))
---   Just (App (Ref "y") (Ref "y"))
--- 
---   >>> step [] (App ( Abs "y" (Abs "x" (App (Ref "x") (Ref "y"))) )(Ref "w"))
---   Just (Abs "x" (App (Ref "x") (Ref "w")))
-
 step' :: EvalScope -> Expr -> Maybe Expr 
 step' env (App (Abs x e) r) = Just $ sub ((x,r):env) e 
 step' env (App l r) = case step' env l of 
@@ -69,20 +50,14 @@ evalWithLogs e = case stepWithRedex [] e of
                         evalWithLogs e'
                     _            -> do
                         return e
-                        
-                    -- (_, [])       -> do 
-                    --     return e
-                    -- (Nothing,_) -> do 
-                    --     return e 
-
-
+            
 stepWithRedex :: EvalScope -> Expr -> (Maybe Expr, [Redex]) 
 stepWithRedex env expr@(App (Abs x e) r) = let res  = Just $ sub ((x,r):env) e 
                                                red = [expr]
                                            in (res, red)
 stepWithRedex env expr@(Ref x)   = (Nothing, [])
 stepWithRedex env (Abs x e) = let (e', red) = stepWithRedex env e 
-                            in  (fmap (Abs x) e', red)
+                              in  (fmap (Abs x) e', red)
 stepWithRedex env (App l r) = case stepWithRedex env l of 
                                 (Just l',red) -> (Just (App l' r), red )
                                 (Nothing,_) -> let (r', red) = stepWithRedex env r
@@ -110,7 +85,7 @@ subv m expr@(Ref x) = case lookup x m of
                             Nothing -> expr
 subv m (Abs x e) = case lookup x m of 
                             Just nv -> Abs nv (subv m e)  
-                            Nothing ->  Abs x (subv m e)  
+                            Nothing -> Abs x (subv m e)  
 subv m (App l r) = App (subv m l) (subv m r)   
 
 -- Given an expression e, the following rules define FV(e), the set of free variables in e:
@@ -132,9 +107,3 @@ evalLambda expr = let expr' = rename expr
                     False -> do 
                        putStrLn $ prettyExpr expr 
                        putStrLn $ "=" ++ (prettyEval $ evalWithLogs $ rename expr)
-
-
-
-evaltest = evalWithLogs (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
-logs = snd $ runWriter $ evalWithLogs (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
-results = fst $ runWriter $ evalWithLogs (App (Abs "x" (App (Ref "x") (Ref "x") )) ( App (Abs "y" (Ref "y")) (Ref "z")))
