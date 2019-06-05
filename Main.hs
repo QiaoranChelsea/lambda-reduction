@@ -51,6 +51,8 @@ red5 = App (Abs "y" (Ref "y")) (Ref "z")
 -- lambda6 = App (Abs "x" (App (App (Ref "x") (Ref "x")) (Ref "x"))) (App (Abs "y" (Ref "y")) (Ref "z"))
 lambda6' = (App (App (App (Abs "y" (Ref "y")) (Ref "z")) (App (Abs "y" (Ref "y")) (Ref "z"))) (App (Abs "y" (Ref "y")) (Ref "z")))
 
+lambda7 =(App (App (Abs "y" (App (Ref "y") (Ref "y") )) (Ref "z")) (App (Abs "y" (Ref "y")) (Ref "z"))) 
+lambda8 = Abs "y" (App lambda5' lambda5')
 big = App lambda5' lambda6'
 test1 = let v = initView lambda5 
         in view v

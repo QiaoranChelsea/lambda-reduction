@@ -6,64 +6,6 @@ import Data.List
 import Control.Monad.State
 import Control.Monad.Writer
 
--- 
--- * refactor with State and Writer monad 
---
-type RenameLog = RenameMapping
-type Eval a = WriterT RenameLog (State RenameMapping ) a 
-
-type RenameMap  = (Var, Int)
-
-ex =  App (Abs "x" (App (Ref "x") (Ref "x"))) (App (Abs "y" (Ref "y")) (Ref "z"))
-
--- substitude bound variable for avoiding duplicate redexes 
-foo :: Expr ->  ((Expr, RenameLog), RenameMapping)
-foo ex  = runState (runWriterT (subDupBV ex)) []
-
-renameDupBV:: Expr -> (Expr, RenameMapping) 
-renameDupBV ex = fst $ runState (runWriterT (subDupBV ex)) []
-                 
-
--- | log new rename mapping in Log 
-logName :: (Var,Var) -> Eval ()
-logName vpair = do  tell [vpair]  
-
-
-subDupBV :: Expr -> Eval Expr 
-subDupBV e@(Ref x) = do m <- get
-                        case lookup x m of                    
-                          Just nv -> do return (Ref nv)
-                          Nothing -> return e
-subDupBV (Abs x e) = do m <- get 
-                        e' <- subDupBV e 
-                        -- m <- get  
-                        case lookup x m of 
-                          Just nv -> do logName (x,nv)
-                                        return  (Abs nv e')
-                          Nothing -> do return (Abs x e')                
-subDupBV expr@(App l r) = do l' <-  subDupBV l 
-                             updateState l 
-                             r' <- subDupBV r  
-                             updateState r 
-                             return (App l' r')
-
-updateState :: Expr ->  Eval ()
-updateState expr = do m <- get 
-                      let bv = (nub (bound expr))
-                          nameMapping = newM bv (length m) 
-                      put $ (nameMapping ++ m)
-                                 
--- The censor function takes a function and a Writer and produces a new Writer whose output is the same but whose log entry has been modified by the function.
--- runEval :: Expr -> (Expr, RenameLog)
--- runEval x = runState (runWriterT (foo x)) (EvalState 0)            
-
-newV :: Var -> Int -> Var
-newV v i =  v++ (show i)
-
-newM :: [Var] -> Int  -> [(Var, Var)]
-newM bv i = [ (v, newV v i) | v <- bv]
-
-
 -- | get all redexes in current level lambda expression
 getRedexes :: Expr -> [Redex]
 getRedexes = filterRedex isRedex
@@ -91,29 +33,6 @@ lfReduce e@(App l r) red | e == red = step e
                          | elem red (getRedexes r) = App l (lfReduce r red)
 lfReduce (Abs x body) red = Abs x (lfReduce body red)
 lfReduce e   _   = e 
-
-
--- | rename Expr for the duplicate redexes
---   * Note that the duplicate redex will only happen when the expr is (App l r) 
-renameForDupRedex :: Expr -> (Expr, RenameMapping) 
-renameForDupRedex e = let (e',m,log) = subvForDupRedex [] e 
-                      in (e',log)
-
--- substitude bound variable for avoiding duplicate redexes 
-subvForDupRedex :: RenameMapping -> Expr -> (Expr , RenameMapping, RenameMapping) 
-subvForDupRedex m expr@(Ref x) = case lookup x m of 
-                                   Just nv -> (Ref nv, m, (x,nv): m) 
-                                   Nothing -> (expr, m,  m)
-subvForDupRedex m (Abs x e) = let (e',m',log)= (subvForDupRedex m e)
-                              in case lookup x m' of 
-                                   Just nv -> (Abs nv e' , m',(x,nv):log)
-                                   Nothing -> (Abs x e' , m', log ) 
-subvForDupRedex m (App l r) = let (l',m2,log1) = subvForDupRedex m l 
-                                  (r',m3,log2) = (subvForDupRedex m2 r)  
-                                  log = log1 ++ log2
-                                  bv = nub (bound l') \\ (map snd log)
-                                  m4 = zip bv (zipWith (++) bv (map show [1 + (length log ) .. length log+(length bv)] ))
-                              in (App l' r', m4, nub (log1++log2))
 
                                     
 -- get all bound variable in the expression
@@ -152,8 +71,94 @@ reduceWith i (Node e children m) = let (eview,red) = children !! i
                                    in Node e [(subview, red)] m
              where getRootExp (Node e sub m) = e 
                    getRootExp (Leaf e)     = e
-                                     
+ 
+-- 
+-- * refactor with State and Writer monad for rename duplicate bound variable 
+--
+
+type RenameLog = RenameMapping
+type Eval a = WriterT RenameLog (State RenameMapping ) a 
+
+renameDupBV:: Expr -> (Expr, RenameLog) 
+renameDupBV ex = fst $ runState (runWriterT (subDupBV ex)) []
+
+foo :: Expr -> ((Expr,RenameLog), RenameMapping)
+foo ex = runState (runWriterT (subDupBV ex)) []
+
+subDupBV :: Expr -> Eval Expr 
+subDupBV e@(Ref x) = do m <- get
+                        case lookup x m of                    
+                          Just nv -> do return (Ref nv)
+                          Nothing -> return e
+subDupBV expr@(Abs x e) = do  (exp,w) <- listen $ do m <- get 
+                                                     e' <- (subDupBV e) 
+                                                     case lookup x m of 
+                                                        Just nv -> do logName (x,nv)
+                                                                      return  (Abs nv e')
+                                                        Nothing -> do return (Abs x e')                        
+                              updateState expr w
+                              return exp
+-- subDupBV expr@(App l r) =do m <- get 
+--                             (l',w) <-  listen (subDupBV l) 
+--                             -- logName (prettyExpr l, "=>"++ prettyExpr l' ++ "||"++ printPair m)
+--                             (r',w') <- listen (subDupBV r) 
+--                             -- logName (prettyExpr r, "=>"++ prettyExpr r' ++ printPair m)
+--                             updateState expr (w++w')
+--                             return (App l' r')
+-- printPair :: [(Var, Var)] -> String 
+-- printPair [] = ""              
+-- printPair ((x,y):xs) = (concat ["(", x, ",", y, ")"]) ++ printPair xs
+subDupBV expr@(App l r) =do (e,topw) <-  listen $  do (l',w) <-  listen (subDupBV l) 
+                                                      updateState l w 
+                                                      -- logName (prettyExpr l, "=>"++ prettyExpr l')
+                                                      (r',w') <- listen (subDupBV r) 
+                                                      updateState r w'
+                                                      -- logName (prettyExpr r, "=>"++ prettyExpr r')
+                                                      return (App l' r')
+                            updateState expr topw
+                            return e 
+
+-- | log new rename mapping in Log 
+logName :: (Var,Var) -> Eval ()
+logName vpair = do  tell [vpair] 
+
+updateState :: Expr -> RenameLog->  Eval ()
+updateState expr w = do m <- get
+                        let bv = (nub (bound expr)) 
+                            nameMapping = newM bv (length w) 
+                        put $ ( nameMapping )                                       
+
+newV :: Var -> Int -> Var
+newV v i =  v++ (show i)
+
+newM :: [Var] -> Int  -> [(Var, Var)]
+newM bv i = [ (v, newV v i) | v <- bv]
+
+
+-- -- | rename Expr for the duplicate redexes
+-- --   * Note that the duplicate redex will only happen when the expr is (App l r) 
+-- renameForDupRedex :: Expr -> (Expr, RenameMapping) 
+-- renameForDupRedex e = let (e',m,log) = subvForDupRedex [] e 
+--                       in (e',log)
+
+-- -- substitude bound variable for avoiding duplicate redexes 
+-- subvForDupRedex :: RenameMapping -> Expr -> (Expr , RenameMapping, RenameMapping) 
+-- subvForDupRedex m expr@(Ref x) = case lookup x m of 
+--                                    Just nv -> (Ref nv, m, (x,nv): m) 
+--                                    Nothing -> (expr, m,  m)
+-- subvForDupRedex m (Abs x e) = let (e',m',log)= (subvForDupRedex m e)
+--                               in case lookup x m' of 
+--                                    Just nv -> (Abs nv e' , m',(x,nv):log)
+--                                    Nothing -> (Abs x e' , m', log ) 
+-- subvForDupRedex m (App l r) = let (l',m2,log1) = subvForDupRedex m l 
+--                                   (r',m3,log2) = (subvForDupRedex m2 r)  
+--                                   log = log1 ++ log2
+--                                   bv = nub (bound l') \\ (map snd log)
+--                                   m4 = zip bv (zipWith (++) bv (map show [1 + (length log ) .. length log+(length bv)] ))
+--                               in (App l' r', m4, nub (log1++log2))                                    
                     
 
-
+-- substitude bound variable for avoiding duplicate redexes 
+-- foo :: Expr ->  ((Expr, RenameLog), RenameMapping)
+-- foo ex  = runState (runWriterT (subDupBV ex)) []
 
