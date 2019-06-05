@@ -52,7 +52,7 @@ initOneLayer :: Expr -> EvalLayer
 initOneLayer e = let (e1,log1) = captureAvoidRename e
                      (e2,log2) = renameDupBV e1
                      reds = getRedexes e2
-                     result = map (lfReduce e2) reds 
+                     result = map (lfReduce e2) reds   
                  in Layer e (zip result reds) (log1++log2)
 
 -- translate One Layer to View Tree 
