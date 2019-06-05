@@ -3,7 +3,6 @@ module Draw where
 import Syntax
 import Control.Monad.Writer
 
--- | Draw Result view without redex 
 drawResultView :: EvalView -> String 
 drawResultView = unlines . drawView' False
 
@@ -13,7 +12,7 @@ drawAllView = unlines . drawView' True
 
 -- | drawView with True ==> view with redex 
 --   drawView with False ==> view without redex      
-drawView' :: Bool -> EvalView -> [String]
+drawView' ::  Bool -> EvalView -> [String]
 drawView' b (Node e xs m) = prettyExpr e : drawSubTrees xs
   where
     drawSubTrees [] = []
