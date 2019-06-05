@@ -6,7 +6,6 @@ import Data.List
 import Control.Monad.State
 import Control.Monad.Writer
 
-
 -- | get all redexes in current level lambda expression
 getRedexes :: Expr -> [Redex]
 getRedexes = filterRedex isRedex
@@ -74,7 +73,8 @@ reduceWith i (Node e children m) = let (eview,red) = children !! i
                    getRootExp (Leaf e)     = e
 
 -- 
--- * refactor with State and Writer monad 
+--  * rename the bound variable for avoiding duplicate redexes 
+--  * refactor with State and Writer monad 
 --
 
 renameDupBV:: Expr -> (Expr, RenameMapping) 
@@ -107,10 +107,7 @@ updateState expr = do m <- get
                       let bv = (nub (bound expr))
                           nameMapping = newM bv (length m) 
                       put $ (nameMapping ++ m)
-                                 
--- The censor function takes a function and a Writer and produces a new Writer whose output is the same but whose log entry has been modified by the function.
--- runEval :: Expr -> (Expr, RenameLog)
--- runEval x = runState (runWriterT (foo x)) (EvalState 0)            
+                                            
 
 newV :: Var -> Int -> Var
 newV v i =  v++ (show i)
@@ -145,4 +142,7 @@ newM bv i = [ (v, newV v i) | v <- bv]
 -- foo :: Expr ->  ((Expr, RenameLog), RenameMapping)
 -- foo ex  = runState (runWriterT (subDupBV ex)) []
 
+-- The censor function takes a function and a Writer and produces a new Writer whose output is the same but whose log entry has been modified by the function.
+-- runEval :: Expr -> (Expr, RenameLog)
+-- runEval x = runState (runWriterT (foo x)) (EvalState 0) 
 

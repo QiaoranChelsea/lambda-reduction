@@ -11,8 +11,8 @@ import Control.Monad.State
 import Control.Monad.Trans.Maybe
 
 
--- TODO: 1. cut the operation if exceed some depth 
---       2. Assume the original var do not have int in the Name 
+-- To Do : 1. cut the operation if exceed some depth 
+--         2. Assume the original var do not have int in the Name 
 main :: IO ()
 main = return ()
 
@@ -25,10 +25,9 @@ viewResults = putStrLn . drawResultView
 view :: EvalView -> IO ()
 view = putStrLn . drawAllView
 
--- viewLayer :: EvalLayer -> IO ()
--- viewLayer = putStrLn . drawOneLayer 
+
 --
--- small test suite
+-- Examples
 --
 
 -- | (\x . x x) ((\y . y) z)
@@ -52,10 +51,10 @@ lambda5'' = (App (App (Abs "x" (Ref "x")) (Ref "z")) (App (Abs "y" (Ref "y")) (R
 red5 = App (Abs "y" (Ref "y")) (Ref "z") 
  
 -- | (\x.xxx)((\y.y)z) -- bad loop 
--- lambda6 = App (Abs "x" (App (App (Ref "x") (Ref "x")) (Ref "x"))) (App (Abs "y" (Ref "y")) (Ref "z"))
+lambda6 = App (Abs "x" (App (App (Ref "x") (Ref "x")) (Ref "x"))) (App (Abs "y" (Ref "y")) (Ref "z"))
 lambda6' = (App (App (App (Abs "y" (Ref "y")) (Ref "z")) (App (Abs "y" (Ref "y")) (Ref "z"))) (App (Abs "y" (Ref "y")) (Ref "z")))
 
-big = App lambda5' lambda6'
+
 test1 = let v = initView lambda5 
         in view v
 test2 = let v = initView lambda5'
