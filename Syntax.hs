@@ -2,6 +2,7 @@ module Syntax where
 
 
 import Control.Monad.Writer
+import Control.Monad.State
 
 
 -- | Variable Name 
@@ -33,6 +34,10 @@ data EvalView = Leaf Expr | Node Expr [(EvalView, Redex)] RenameMapping
 -- |  [(Expr, Redex, Expr)]=> resultExpr + redex + originalExpr
 data EvalLayer = Layer Expr [(Expr, Redex)] RenameMapping
     deriving (Show)
+
+
+type RenameLog = RenameMapping
+type Rename a = WriterT RenameLog (State RenameMapping ) a 
 
 
 

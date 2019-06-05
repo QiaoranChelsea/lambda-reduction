@@ -6,6 +6,10 @@ import Syntax
 import Draw
 import Control.Monad
 
+import Control.Monad.Writer
+import Control.Monad.State
+import Control.Monad.Trans.Maybe
+
 
 -- TODO: 1. cut the operation if exceed some depth 
 --       2. Assume the original var do not have int in the Name 

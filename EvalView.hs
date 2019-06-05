@@ -76,10 +76,6 @@ reduceWith i (Node e children m) = let (eview,red) = children !! i
 -- 
 -- * refactor with State and Writer monad 
 --
-type RenameLog = RenameMapping
-type Eval a = WriterT RenameLog (State RenameMapping ) a 
-
-type RenameMap  = (Var, Int)
 
 ex =  App (Abs "x" (App (Ref "x") (Ref "x"))) (App (Abs "y" (Ref "y")) (Ref "z"))
 
@@ -92,18 +88,17 @@ renameDupBV ex = fst $ runState (runWriterT (subDupBV ex)) []
                  
 
 -- | log new rename mapping in Log 
-logName :: (Var,Var) -> Eval ()
+logName :: (Var,Var) -> Rename ()
 logName vpair = do  tell [vpair]  
 
 
-subDupBV :: Expr -> Eval Expr 
+subDupBV :: Expr -> Rename Expr 
 subDupBV e@(Ref x) = do m <- get
                         case lookup x m of                    
                           Just nv -> do return (Ref nv)
                           Nothing -> return e
 subDupBV (Abs x e) = do m <- get 
                         e' <- subDupBV e 
-                        -- m <- get  
                         case lookup x m of 
                           Just nv -> do logName (x,nv)
                                         return  (Abs nv e')
@@ -114,7 +109,7 @@ subDupBV expr@(App l r) = do l' <-  subDupBV l
                              updateState r 
                              return (App l' r')
 
-updateState :: Expr ->  Eval ()
+updateState :: Expr ->  Rename ()
 updateState expr = do m <- get 
                       let bv = (nub (bound expr))
                           nameMapping = newM bv (length m) 
