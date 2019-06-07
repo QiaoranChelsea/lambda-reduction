@@ -1,10 +1,15 @@
 # Lambda-Reduction Explanation Tree 
+Lambda-Reduction Explanation Tree is intended to  explain how lambda caculus reduction performed. 
+With this system you could:
+* Find all redexes in one expression
+* Show reduction results for each redexes selected
+* Perform bound variable renaming if needed
 
 ## Steps to run
 `> ghci Main.hs`
 
 ## Examples 
-Example lambda expression
+Example lambda expression created in the Main.hs
 ```
 > lambda1
 ((λx. (x x)) ((λy. y) z))
@@ -18,7 +23,7 @@ Example lambda expression
 (λx. ((λy. (λx. (y x))) x))
 ```
 
-Initialize a view 
+Initialize a a evaluation tree (EvalView) by giving a lambda expression(Expr) as input
 ```
 > let v = initView lambda1
 ```
@@ -53,7 +58,7 @@ View entire evaluation tree
 ```
 
 
-View just the evolution results
+View just the evaluation results (ignoring the selected redex).
 ```
 > viewResults v
 ((λx. (x x)) ((λy. y) z))
@@ -75,7 +80,7 @@ View just the evolution results
    `- (z z)
 ```
 
-Look for the top level redexes
+View the top level redexes
 ```
 > view $ redexes v
 ((λx. (x x)) ((λy. y) z))
@@ -87,7 +92,7 @@ Look for the top level redexes
    ((λx. (x x)) z)
 ```
 
-Look for the evaluation about the i-th redex (NOTE:index start with 0 )
+View the evaluation about the i-th redex (NOTE:index start with 0 )
 ```
 > view $ reduceWith 1 $ redexes v
 ((λx. (x x)) ((λy. y) z))
@@ -100,7 +105,7 @@ Look for the evaluation about the i-th redex (NOTE:index start with 0 )
 ``` 
 
 ## Other Examples
-Evaluate Lambda in Normal Order 
+Evaluate Lambda in Normal Order. (-- xxx : represent the redex selected) 
 ```
 > evalLambda lambda1
 ((λx. (x x)) ((λy. y) z))	 --((λx. (x x)) ((λy. y) z))
