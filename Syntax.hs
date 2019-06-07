@@ -45,7 +45,6 @@ type Rename a = WriterT RenameLog (State RenameMapping ) a
 instance Show Expr where
   show = prettyExpr
 
-
 prettyExpr :: Expr -> String 
 prettyExpr (Ref v)     =  v 
 prettyExpr (App l r )  = concat ["(", prettyExpr l, " ", prettyExpr r, ")"] 

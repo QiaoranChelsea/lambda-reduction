@@ -1,6 +1,6 @@
 module Main where 
 
-import NormalOrder
+import Reduction
 import EvalView
 import Syntax
 import Draw
@@ -51,7 +51,7 @@ lambda5'' = (App (App (Abs "x" (Ref "x")) (Ref "z")) (App (Abs "y" (Ref "y")) (R
 red5 = App (Abs "y" (Ref "y")) (Ref "z") 
  
 -- | (\x.xxx)((\y.y)z) -- bad loop 
-lambda6 = App (Abs "x" (App (App (Ref "x") (Ref "x")) (Ref "x"))) (App (Abs "y" (Ref "y")) (Ref "z"))
+-- lambda6 = App (Abs "x" (App (App (Ref "x") (Ref "x")) (Ref "x"))) (App (Abs "y" (Ref "y")) (Ref "z"))
 lambda6' = (App (App (App (Abs "y" (Ref "y")) (Ref "z")) (App (Abs "y" (Ref "y")) (Ref "z"))) (App (Abs "y" (Ref "y")) (Ref "z")))
 
 

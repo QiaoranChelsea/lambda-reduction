@@ -1,5 +1,5 @@
 -- | operation in Normal Order Evaluation
-module NormalOrder where 
+module Reduction where 
 
 import qualified Data.Map as Map
 import Control.Monad.Writer
@@ -9,7 +9,7 @@ import Syntax
 import Data.List
 
 --
--- ** simple evaluation 
+-- ** simple evaluation without log redexes 
 --
 
 -- | Evaluate an expression to normal form using normal order evaluation.
@@ -48,6 +48,7 @@ sub env (App l r)      = App (sub env l) (sub env r)
 --
 
 type EvalStep a = State [Redex] a
+
 -- | original plain impelmentation 
 evalWithLogs :: Expr -> Writer Logs Expr  
 evalWithLogs e = let (e', red) = stepWithState e 
@@ -75,9 +76,8 @@ stepWithState' env (App l r) = do l' <- stepWithState' env l
                                               return ( App l r')
                                       else return (App l' r)
                         
-
 -- 
--- ** capture-avoiding substution 
+-- ** capture-avoiding substution/Rename 
 --
 
 -- | rename variable to avoid variable capture problem
@@ -124,17 +124,20 @@ captureAvoidSub (App l r) = do l' <- captureAvoidSub l
                                r' <- captureAvoidSub r
                                return (App l' r')
 
-
+-- | update the variable rename mapping  
 updateFVMapping :: Expr -> Rename ()
 updateFVMapping e = do let fv = free e 
                            m = zip fv (zipWith (++) fv (map show [1..(length fv)] ))
                        put m 
 
+
+-- | get all the free variable in the expression
+
 -- Given an expression e, the following rules define FV(e), the set of free variables in e:
 -- If e is a variable x, then FV(e) = {x}.
 -- If e is of the form λx.y, then FV(e) = FV(y) - {x}.
 -- If e is of the form xy, then FV(e) = FV(x) ∪ FV(y)
---  get all the free variable in the expression
+
 free :: Expr -> [Var] 
 free (Ref x)   = [x]
 free (Abs x y) = delete x (free y) 
@@ -150,57 +153,3 @@ evalLambda expr = let expr' = rename expr
                        putStrLn $ prettyExpr expr 
                        putStrLn $ "=" ++ (prettyEval $ evalWithLogs $ rename expr)
 
-
-
--- -- 
--- --  * OLD !!! evaluate the lambda expression 
--- --    and keep track of each result of reduction and corresponding redex
--- --
--- -- | original plain impelmentation 
--- evalWithLogs0 :: Expr -> Writer Logs Expr  
--- evalWithLogs0 e = case stepWithRedex [] e of   
---                     (Just e',log) -> do 
---                         tell [(e, (head log))]
---                         evalWithLogs0 e'
---                     _            -> do
---                         return e
-            
--- stepWithRedex :: EvalScope -> Expr -> (Maybe Expr, [Redex]) 
--- stepWithRedex env expr@(App (Abs x e) r) = let res  = Just $ sub ((x,r):env) e 
---                                                red = [expr]
---                                            in (res, red)
--- stepWithRedex env expr@(Ref x)   = (Nothing, [])
--- stepWithRedex env (Abs x e) = let (e', red) = stepWithRedex env e 
---                               in  (fmap (Abs x) e', red)
--- stepWithRedex env (App l r) = case stepWithRedex env l of 
---                                 (Just l',red) -> (Just (App l' r), red )
---                                 (Nothing,_) -> let (r', red) = stepWithRedex env r
---                                                in ( fmap (App l) r', red)
---                                   -- liftM ??
-
--- -- | use only state monad  with Maybe value                                  
--- evalWithLogs1 :: Expr -> Writer Logs Expr 
--- evalWithLogs1 e = case stepWithState1 e of 
---                     (Just e',log) -> do 
---                           tell [(e, (head log))]
---                           evalWithLogs1 e'
---                     _            -> return e
-                
-
-
--- type EvalStep a = State [Redex] a
--- stepWithState1 :: Expr -> (Maybe Expr, [Redex])
--- stepWithState1 expr  = runState (stepWithState1' [] expr) []
-
--- stepWithState1' :: EvalScope -> Expr -> EvalStep (Maybe Expr)
--- stepWithState1' env expr@(App (Abs x e) r) = do put [expr]
---                                                 return (Just (sub ((x,r):env) e))  
--- stepWithState1' env expr@(Ref x)  = do put []
---                                        return Nothing 
--- stepWithState1' env (Abs x e) = do e' <- stepWithState1' env e 
---                                    return (fmap (Abs x) e')
--- stepWithState1' env (App l r) = do l' <- stepWithState1' env l 
---                                    case l' of   
---                                      Just l' -> return (Just (App l' r))
---                                      Nothing -> do r' <- stepWithState1' env r
---                                                    return (fmap (App l) r')
