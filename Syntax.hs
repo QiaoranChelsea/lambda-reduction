@@ -1,12 +1,10 @@
 module Syntax where 
 
-
 import Control.Monad.Writer
 import Control.Monad.State
 
 
 -- | Variable Name 
-type Depth = Int 
 type Var = String 
     
 -- | Named lambda calculus terms.      
@@ -15,33 +13,35 @@ data Expr = Ref Var       -- ^ variable reference
          | Abs Var Expr   -- ^ lambda abstraction
   deriving (Eq)
 
+-- | Evaluation Scope
 type EvalScope = [(Var, Expr)]
 
--- | old var,new var
+-- | Mapping from old var -> new var
 type RenameMapping = [(Var, Var)]
 type Redex = Expr
 
--- | cur whole expr + redux
+-- | Current whole expr + redux
 type Logs = [(Expr, Redex)]
 
--- | Graph for Eval Trace, Pair shows the child with its Redex
+-- | Rose Tree for Eval Trace, Pair shows the result expresssion with its Redex
 data EvalView = Leaf Expr | Node Expr [(EvalView, Redex)] RenameMapping
     deriving (Show)
-
--- data EvalViewLog = State EvalView (Expr,Expr)
 
 -- | One layer of the Evaluation 
 -- |  [(Expr, Redex, Expr)]=> resultExpr + redex + originalExpr
 data EvalLayer = Layer Expr [(Expr, Redex)] RenameMapping
     deriving (Show)
 
-
+-- | Log the variable name which have been actually renamed 
 type RenameLog = RenameMapping
+
+-- | Wrap up the state and writer monad 
 type Rename a = WriterT RenameLog (State RenameMapping ) a 
 
 
-
-
+-- 
+-- ** Pretty Print the Syntax 
+--
 instance Show Expr where
   show = prettyExpr
 

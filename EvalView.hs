@@ -1,3 +1,8 @@
+-- | This module impelemnts functions that relates to the explanation view tree.
+-- Contents in this module 
+-- 1. Operation User could use for evaluation tree
+-- 2. Helper functions to impelment the view
+-- 3. Rename the bound variable for avoiding duplicate redexes 
 module EvalView where 
 
 import Syntax 
@@ -5,6 +10,7 @@ import Reduction
 import Data.List
 import Control.Monad.State
 import Control.Monad.Writer
+
 
 --
 -- * Operations 
@@ -17,16 +23,10 @@ initView = transLayer2View. initOneLayer
 -- init one layer of evaluation tree
 initOneLayer :: Expr -> EvalLayer
 initOneLayer e = let (e1,log1) = captureAvoidRename e
-                     (e2,log2) = renameDupBV e1
+                     (e2,log2) = dupRedexRename e1
                      reds = getRedexes e2
                      result = map (lfReduce e2) reds   
                  in Layer e (zip result reds) (log1++log2)
-
--- initOneLayer :: Expr -> EvalLayer
--- initOneLayer e = let (e',log) = renameDupBV e
---                      reds = getRedexes e'
---                      result = map (lfReduce e') reds   
---                  in Layer e (zip result reds) (log)
 
 -- translate One Layer to View Tree 
 transLayer2View :: EvalLayer -> EvalView
@@ -82,34 +82,32 @@ lfReduce (Abs x body) red = Abs x (lfReduce body red)
 lfReduce e   _   = e 
                                     
 
-
-
 -- 
 --  * Rename the bound variable for avoiding duplicate redexes 
 --    refactor with State and Writer monad 
 --
 
 -- | Rename the bound variable for avoiding duplicate redexes 
-renameDupBV:: Expr -> (Expr, RenameLog) 
-renameDupBV ex = fst $ runState (runWriterT (subDupBV ex)) []
+dupRedexRename:: Expr -> (Expr, RenameLog) 
+dupRedexRename ex = fst $ runState (runWriterT (dupRedexSub ex)) []
                 
 -- substitude the duplicated bound variable in expression
-subDupBV :: Expr -> Rename Expr 
-subDupBV e@(Ref x) = do m <- get
-                        case lookup x m of                    
-                          Just nv -> do return (Ref nv)
-                          Nothing -> return e
-subDupBV (Abs x e) = do m <- get 
-                        e' <- subDupBV e 
-                        case lookup x m of 
-                          Just nv -> do logName (x,nv)
-                                        return  (Abs nv e')
-                          Nothing -> do return (Abs x e')                
-subDupBV expr@(App l r) = do l' <-  subDupBV l 
-                             updateState l 
-                             r' <- subDupBV r  
-                             updateState r 
-                             return (App l' r')
+dupRedexSub :: Expr -> Rename Expr 
+dupRedexSub e@(Ref x) = do m <- get
+                           case lookup x m of                    
+                             Just nv -> do return (Ref nv)
+                             Nothing -> return e
+dupRedexSub (Abs x e) = do m <- get 
+                           e' <- dupRedexSub e 
+                           case lookup x m of 
+                             Just nv -> do logName (x,nv)
+                                           return  (Abs nv e')
+                             Nothing -> do return (Abs x e')                
+dupRedexSub expr@(App l r) = do  l' <-  dupRedexSub l 
+                                 updateState l 
+                                 r' <- dupRedexSub r  
+                                 updateState r 
+                                 return (App l' r')
 
 -- | update the renamming mapping state
 updateState :: Expr ->  Rename ()
@@ -118,15 +116,8 @@ updateState expr = do m <- get
                           nameMapping = newM bv (length m) 
                       put $ (nameMapping ++ m)
 
--- | log new rename mapping in Log 
-logName :: (Var,Var) -> Rename ()
-logName vpair = do  tell [vpair]  
 
--- get all bound variable in the expression
-bound :: Expr -> [Var] 
-bound (Ref x)   = []
-bound (Abs x y) = x : (bound y) 
-bound (App x y) = (bound x ++ bound y)                                            
+
 
 -- | new variable name
 newV :: Var -> Int -> Var

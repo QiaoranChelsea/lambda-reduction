@@ -1,4 +1,8 @@
--- | operation in Normal Order Evaluation
+-- | This module contains the function related to Evaluation/reduction
+-- Contents in this module 
+-- 1. simple evaluation/reduction without redexes log 
+-- 2. Evaluation with log (log redex choosen for each reduction )
+-- 3. capture-avoiding substution/Rename 
 module Reduction where 
 
 import qualified Data.Map as Map
@@ -8,8 +12,10 @@ import Control.Monad.Trans.Maybe
 import Syntax 
 import Data.List
 
+
+
 --
--- ** simple evaluation without log redexes 
+-- ** simple evaluation without redexes log 
 --
 
 -- | Evaluate an expression to normal form using normal order evaluation.
@@ -61,7 +67,6 @@ stepWithState :: Expr -> (Expr, [Redex])
 stepWithState expr  = runState (stepWithState' [] expr) []
 
 -- | use only State with simple value 
-
 stepWithState' :: EvalScope -> Expr -> EvalStep Expr
 stepWithState' env expr@(App (Abs x e) r) = do put [expr]
                                                return (sub ((x,r):env) e)  
@@ -80,41 +85,26 @@ stepWithState' env (App l r) = do l' <- stepWithState' env l
 -- ** capture-avoiding substution/Rename 
 --
 
--- | rename variable to avoid variable capture problem
-rename :: Expr -> Expr
-rename = subv []
-
--- | substitude the bound variables for avoiding variable capture
-subv :: RenameMapping -> Expr -> Expr
-subv m expr@(App (Abs x e) r) = let fv = free r
-                                    m' = zip fv (zipWith (++) fv (map show [1..(length fv)] ))
-                                    e' = subv m' e
-                                in case lookup x m' of
-                                  Just nx -> (App (Abs nx e') r)
-                                  Nothing -> (App (Abs x e') r)
-subv m expr@(Ref x) = case lookup x m of 
-                            Just nv -> Ref nv 
-                            Nothing -> expr
-subv m (Abs x e) = case lookup x m of 
-                            Just nv -> Abs nv (subv m e)  
-                            Nothing -> Abs x (subv m e)  
-subv m (App l r) = App (subv m l) (subv m r)   
-
--- | use monad 
+-- | rename variable to avoid variable capture problem (Implement with monad)
 captureAvoidRename :: Expr -> (Expr, RenameLog)
 captureAvoidRename expr = fst $ runState (runWriterT (captureAvoidSub expr)) []
 
+captureAvoidRename' :: Expr -> ((Expr, RenameLog), RenameMapping)
+captureAvoidRename' expr = runState (runWriterT (captureAvoidSub expr)) []
+
 captureAvoidSub :: Expr -> Rename Expr 
-captureAvoidSub expr@(App (Abs x e) r) = do updateFVMapping r
+captureAvoidSub expr@(App (Abs x e) r) = do updateFVMapping expr
                                             m <- get
                                             e' <- captureAvoidSub e
                                             case lookup x m of
-                                              Just nx -> return (App (Abs nx e') r)
+                                              Just nx -> do logName (x,nx)
+                                                            return (App (Abs nx e') r)
                                               Nothing -> return (App (Abs x e') r)
 captureAvoidSub expr@(Ref x) = do m <- get 
                                   case lookup x m of 
-                                    Just nv -> return (Ref nv) 
-                                    Nothing -> return (expr)
+                                    Just nv -> do logName (x,nv)
+                                                  return (Ref nv) 
+                                    Nothing -> return expr
 captureAvoidSub (Abs x e) = do  m <- get
                                 e' <- captureAvoidSub e
                                 case lookup x m of 
@@ -124,11 +114,17 @@ captureAvoidSub (App l r) = do l' <- captureAvoidSub l
                                r' <- captureAvoidSub r
                                return (App l' r')
 
+-- | log new rename mapping in Log 
+logName :: (Var,Var) -> Rename ()
+logName vpair = do  tell [vpair]  
+
 -- | update the variable rename mapping  
 updateFVMapping :: Expr -> Rename ()
-updateFVMapping e = do let fv = free e 
-                           m = zip fv (zipWith (++) fv (map show [1..(length fv)] ))
-                       put m 
+updateFVMapping expr@(App (Abs x e) r) = do  let fv = free r  
+                                                 bv = bound e
+                                                 nv = fv `intersect` bv
+                                                 m = zip nv (zipWith (++) nv (map show [1..(length nv)] ))
+                                             put m 
 
 
 -- | get all the free variable in the expression
@@ -143,13 +139,29 @@ free (Ref x)   = [x]
 free (Abs x y) = delete x (free y) 
 free (App x y) = nub (free x ++ free y)
 
+-- get all bound variable in the expression
+bound :: Expr -> [Var] 
+bound (Ref x)   = []
+bound (Abs x y) = x : (bound y) 
+bound (App x y) = (bound x ++ bound y)                                            
 
--- | evaluate a lambda expression by using normal order 
-evalLambda :: Expr -> IO ()
-evalLambda expr = let expr' = rename expr
-                  in case expr' == expr  of  
-                    True -> printWriter $ evalWithLogs expr 
-                    False -> do 
-                       putStrLn $ prettyExpr expr 
-                       putStrLn $ "=" ++ (prettyEval $ evalWithLogs $ rename expr)
+-- | rename variable to avoid variable capture problem
+rename :: Expr -> Expr
+rename = subv []
+
+-- | substitude the bound variables for avoiding variable
+subv :: RenameMapping -> Expr -> Expr
+subv m expr@(App (Abs x e) r) = let fv = free r
+                                    m' = zip fv (zipWith (++) fv (map show [1..(length fv)] ))
+                                    e' = subv m' e
+                                in case lookup x m' of
+                                  Just nx -> (App (Abs nx e') r)
+                                  Nothing -> (App (Abs x e') r)
+subv m expr@(Ref x) = case lookup x m of 
+                            Just nv -> Ref nv 
+                            Nothing -> expr
+subv m (Abs x e) = case lookup x m of 
+                            Just nv -> Abs nv (subv m e)  
+                            Nothing ->  Abs x (subv m e)  
+subv m (App l r) = App (subv m l) (subv m r)   
 
