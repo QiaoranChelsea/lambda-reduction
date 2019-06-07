@@ -1,7 +1,7 @@
 -- | This module contains the function related to Evaluation/reduction
 -- Contents in this module 
--- 1. simple evaluation/reduction without redexes log 
--- 2. Evaluation with log (log redex choosen for each reduction )
+-- 1. Evaluation with log (log redex choosen for each reduction )
+-- 2. simple evaluation/reduction without redexes log 
 -- 3. capture-avoiding substution/Rename 
 module Reduction where 
 
@@ -12,7 +12,54 @@ import Control.Monad.Trans.Maybe
 import Syntax 
 import Data.List
 
+--
+-- ** Evaluation with log (log redex choosen for each reduction )
+--
 
+type EvalStep a = State ([Redex], EvalScope) a
+
+-- | original plain impelmentation 
+evalWithLogs :: Expr -> Writer Logs Expr  
+evalWithLogs e = let (e', (red,_)) = stepWithState e 
+                 in  if null red -- no redex found
+                        then return e 
+                        else do tell [(e, head red)] -- log (lambda expression, and its redex 
+                                evalWithLogs e'
+
+stepWithState :: Expr -> (Expr, ([Redex], EvalScope))
+stepWithState expr  = runState (stepWithState' expr) ([],[])
+
+-- | use only State with simple value 
+-- stepWithState' :: EvalScope -> Expr -> EvalStep Expr
+-- stepWithState' env expr@(App (Abs x e) r) = do put [expr]
+--                                                return (sub ((x,r):env) e)  
+-- stepWithState' env expr@(Ref x)  = do put []  
+--                                       return expr                                
+-- stepWithState' env (Abs x e) = do e' <- stepWithState' env e 
+--                                   return (Abs x e')
+-- stepWithState' env (App l r) = do l' <- stepWithState' env l 
+--                                   m <- get 
+--                                   if null m -- no red found 
+--                                       then do r' <- stepWithState' env r
+--                                               return ( App l r')
+--                                       else return (App l' r)
+
+-- | use only State with simple value 
+stepWithState' ::  Expr -> EvalStep Expr
+stepWithState' expr@(App (Abs x e) r) = do (_,env) <- get
+                                           put ([expr],env)
+                                           return (sub ((x,r):env) e)  
+stepWithState' expr@(Ref x)  = do (_,env) <- get
+                                  put ([],env)  
+                                  return expr                                
+stepWithState' (Abs x e) = do e' <- stepWithState' e 
+                              return (Abs x e')
+stepWithState' (App l r) = do l' <- stepWithState' l 
+                              (reds,env) <- get 
+                              if null reds -- no red found 
+                                  then do r' <- stepWithState' r
+                                          return ( App l r')
+                                  else return (App l' r)
 
 --
 -- ** simple evaluation without redexes log 
@@ -49,37 +96,7 @@ sub env expr@(Ref x)   = case lookup x env of
 sub env epxr@(Abs x e) = Abs x (sub env e)   
 sub env (App l r)      = App (sub env l) (sub env r)                         
 
---
--- ** Evaluation with log (log redex choosen for each reduction )
---
 
-type EvalStep a = State [Redex] a
-
--- | original plain impelmentation 
-evalWithLogs :: Expr -> Writer Logs Expr  
-evalWithLogs e = let (e', red) = stepWithState e 
-                 in  if null red -- no redex found
-                        then return e 
-                        else do tell [(e, head red)] -- log (lambda expression, and its redex 
-                                evalWithLogs e'
-
-stepWithState :: Expr -> (Expr, [Redex])
-stepWithState expr  = runState (stepWithState' [] expr) []
-
--- | use only State with simple value 
-stepWithState' :: EvalScope -> Expr -> EvalStep Expr
-stepWithState' env expr@(App (Abs x e) r) = do put [expr]
-                                               return (sub ((x,r):env) e)  
-stepWithState' env expr@(Ref x)  = do put []  
-                                      return expr                                
-stepWithState' env (Abs x e) = do e' <- stepWithState' env e 
-                                  return (Abs x e')
-stepWithState' env (App l r) = do l' <- stepWithState' env l 
-                                  m <- get 
-                                  if null m -- no red found 
-                                      then do r' <- stepWithState' env r
-                                              return ( App l r')
-                                      else return (App l' r)
                         
 -- 
 -- ** capture-avoiding substution/Rename 
