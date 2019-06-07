@@ -1,8 +1,13 @@
 # Lambda-Reduction Explanation Tree 
+
 Lambda-Reduction Explanation Tree is intended to explain how lambda caculus reduction performed. 
+
 With this system you could:
+
 * Find all redexes in one expression
+
 * Show reduction results for each redexes selected
+
 * Perform bound variable renaming if needed
 
 ## Steps to run
@@ -11,26 +16,33 @@ With this system you could:
 ## Examples 
 Example lambda expression created in Main.hs, you could use directly for demo use.
 
->>>>>>> 3c97f4330fd275d4d215e05e27dffb4f09d18c33
 ```
 > lambda1
 ((λx. (x x)) ((λy. y) z))
+
 > lambda2
 (((λx. (λy. x)) y) u)
+
 >lambda3
 ((λx. (x y)) y)
+
 > lambda4
 ((λx. ((λy. (y x)) (λz. z))) (λw. w))
+
 > lambda5
 (λx. ((λy. (λx. (y x))) x))
 ```
 
+
 Initialize a a evaluation tree (EvalView) by giving a lambda expression(Expr) as input
+
 ```
 > let v = initView lambda1
 ```
 
+
 View entire evaluation tree
+
 ```
 > view v
 ((λx. (x x)) ((λy. y) z))
@@ -82,7 +94,9 @@ View just the evaluation results (ignoring the selected redex).
    `- (z z)
 ```
 
+
 View the top level redexes
+
 ```
 > view $ redexes v
 ((λx. (x x)) ((λy. y) z))
@@ -94,7 +108,9 @@ View the top level redexes
    ((λx. (x x)) z)
 ```
 
+
 View the evaluation about the i-th redex (NOTE:index start with 0 )
+
 ```
 > view $ reduceWith 1 $ redexes v
 ((λx. (x x)) ((λy. y) z))
@@ -106,7 +122,9 @@ View the evaluation about the i-th redex (NOTE:index start with 0 )
       (z z)
 ``` 
 
+
 ## Other Examples
+
 Evaluate Lambda in Normal Order (--xxx: represent the redex selected for evaluation)
 ```
 > evalLambda lambda1
@@ -127,6 +145,9 @@ Rename the bound variable to avoid variable capture
 => ((λy1. y) u)	 --((λy1. y) u)
 => y
 
+> captureAvoidRename lambda5
+((λx. ((λy. (λx1. (y x1))) x)),[("x","x1")])
+
 > evalLambda lambda5
 (λx. ((λy. (λx. (y x))) x))
 =(λx. ((λy. (λx1. (y x1))) x))	 --((λy. (λx1. (y x1))) x)
@@ -134,6 +155,7 @@ Rename the bound variable to avoid variable capture
 
 
 ```
+
 
 ## How FP has affected the project
 1. Used state monad to keep track of redex for each reduction so that I just modify the state whenever I really need to do, instead of explicitly point out the state in every cases. 
