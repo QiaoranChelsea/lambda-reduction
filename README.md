@@ -1,10 +1,15 @@
 # Lambda-Reduction Explanation Tree 
+Lambda-Reduction Explanation Tree is intended to explain how lambda reduction performed.
+With the system, you could:
+* Find all redexes in one expression
+* Show reduction result for each redexes 
+* Perform bound variable renaming if needed
 
 ## Steps to run
 `> ghci Main.hs`
 
 ## Examples 
-Example lambda expression
+Example lambda expression created in Main.hs you could use directly for demo use.
 ```
 > lambda1
 ((λx. (x x)) ((λy. y) z))
@@ -18,7 +23,7 @@ Example lambda expression
 (λx. ((λy. (λx. (y x))) x))
 ```
 
-Initialize a view 
+Initialize a evaluation tree as EvalView by taking a lambda expression (Expr) as input 
 ```
 > let v = initView lambda1
 ```
@@ -53,7 +58,7 @@ View entire evaluation tree
 ```
 
 
-View just the evolution results
+View just the evaluation results (ignoring the selected redex)
 ```
 > viewResults v
 ((λx. (x x)) ((λy. y) z))
@@ -100,7 +105,7 @@ Look for the evaluation about the i-th redex (NOTE:index start with 0 )
 ``` 
 
 ## Other Examples
-Evaluate Lambda in Normal Order 
+Evaluate Lambda in Normal Order (--xxx: represent the redex selected for evaluation)
 ```
 > evalLambda lambda1
 ((λx. (x x)) ((λy. y) z))	 --((λx. (x x)) ((λy. y) z))
