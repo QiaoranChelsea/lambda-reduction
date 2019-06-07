@@ -1,7 +1,7 @@
 # Lambda-Reduction Explanation Tree 
 
 ## Steps to run
-> ghci Main.hs
+`> ghci Main.hs`
 
 ## Examples 
 Example lambda expression
