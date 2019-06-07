@@ -25,6 +25,7 @@ Initialize a view
 
 View entire evaluation tree
 ```
+> view v
 ((λx. (x x)) ((λy. y) z))
 |
 +- REDEX:((λx. (x x)) ((λy. y) z))
