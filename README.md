@@ -113,14 +113,19 @@ Rename the bound variable to avoid variable capture
 ```
 > captureAvoidRename lambda2
 ((((λx. (λy1. x)) y) u),[])
-> captureAvoidRename lambda5
-((λx. ((λy. (λx1. (y x1))) x)),[("x","x1")])
 
 > evalLambda lambda2
 (((λx. (λy. x)) y) u)
 =(((λx. (λy1. x)) y) u)	 --((λx. (λy1. x)) y)
 => ((λy1. y) u)	 --((λy1. y) u)
 => y
+
+> evalLambda lambda5
+(λx. ((λy. (λx. (y x))) x))
+=(λx. ((λy. (λx1. (y x1))) x))	 --((λy. (λx1. (y x1))) x)
+=> (λx. (λx1. (x x1)))
+
+
 ```
 
 ## how FP has affected the project
